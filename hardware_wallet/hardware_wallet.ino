@@ -21,15 +21,6 @@ Adafruit_FeatherOLED oled = Adafruit_FeatherOLED();
 #define USE_TESTNET true
 
 // cleans the display and shows message on the screen
-void show(char * msg, bool done=true){
-    oled.clearDisplay();
-    oled.setCursor(0,0);
-    oled.println(msg);
-    if(done){
-        oled.display();
-    }
-}
-
 void show(String msg, bool done=true){
     oled.clearDisplay();
     oled.setCursor(0,0);
@@ -39,61 +30,42 @@ void show(String msg, bool done=true){
     }
 }
 
-// waits for user to press a button
-bool userConfirmed(){
-    bool confirm = digitalRead(5);
-    bool not_confirm = digitalRead(9);
-    // if none of the buttons is pressed
-    while((confirm && not_confirm)){
-        confirm = digitalRead(5);
-        not_confirm = digitalRead(9);
-    }
-    if(confirm){
-        show("Ok, confirmed");
-        return true;
-    }else{
-        show("Cancelled");
-        return false;
-    }
-}
-
-char buf[4000] = { 0 }; // stores new request
-bool v = false; // user confirmation
-
-bool requestTransactionSignature(Transaction * tx){
-    bool confirm = digitalRead(5);
-    bool not_confirm = digitalRead(9);
-    bool more_info = digitalRead(6);
+bool requestTransactionSignature(Transaction tx){
+    // when digital pins are set with INPUT_PULLUP in the setup
+    // they show 1 when not pressed, so we need to invert them
+    bool confirm = !digitalRead(9);
+    bool not_confirm = !digitalRead(5);
+    bool more_info = !digitalRead(6);
     int i = 0; // index of output that we show
     // waiting for user to confirm / cancel
-    while((confirm && not_confirm)){
-        // waiting user to press any button
+    while((!confirm && !not_confirm)){
         oled.clearDisplay();
         oled.setCursor(0,0);
         oled.print("Sign? Output ");
         oled.print(i);
         oled.println();
-        TransactionOutput output = tx->txOuts[i];
+        TransactionOutput output = tx.txOuts[i];
         oled.print(output.address(USE_TESTNET));
         oled.println(":");
         oled.print(((float)output.amount)/100000);
         oled.print(" mBTC");
         oled.display();
-        while((confirm && not_confirm && more_info)){
-            confirm = digitalRead(5);
-            not_confirm = digitalRead(9);
-            more_info = digitalRead(6);
+        // waiting user to press any button
+        while((!confirm && !not_confirm && !more_info)){
+            confirm = !digitalRead(9);
+            not_confirm = !digitalRead(5);
+            more_info = !digitalRead(6);
         }
-        delay(100); // wait to release the button
-        more_info = true; // reset to default
+        delay(300); // wait to release the button
+        more_info = false; // reset to default
         // scrolling output
         i++;
-        if(i >= tx->outputsNumber){
+        if(i >= tx.outputsNumber){
             i=0;
         }
     }
     if(confirm){
-        show("Ok, confirmed");
+        show("Ok, confirmed.\nSigning...");
         return true;
     }else{
         show("Cancelled");
@@ -125,16 +97,15 @@ void sign_tx(char * cmd){
         Serial.println("error: can't parse tx");
         return;
     }
-    bool ok = requestTransactionSignature(&tx);
+    bool ok = requestTransactionSignature(tx);
     if(ok){
         for(int i=0; i<tx.inputsNumber; i++){
-            TransactionInput input = tx.txIns[i];
             // unsigned transaction from electrum has all info in scriptSig:
             // 01ff4c53ff<xpub><2-byte index1><2-byte index2>
             byte arr[100] = { 0 };
             // serialize() will add script len varint in the beginning
             // serializeScript will give only script content
-            size_t scriptLen = input.scriptSig.serializeScript(arr, sizeof(arr));
+            size_t scriptLen = tx.txIns[i].scriptSig.serializeScript(arr, sizeof(arr));
             // TODO: compare xpub to ours
             // for now just grab two indexes for derivation
             int index1 = littleEndianToInt(arr+scriptLen-4, 2);
@@ -156,27 +127,22 @@ void load_xprv(){
         Serial.println("error: no SD card");
         return;
     }
-
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
     File file = SD.open("xprv.txt");
     char xprv_buf[120] = { 0 };
     if(file){
-        int cursor = 0;
-        // read from the file until there's nothing else in it:
-        while(file.available() && cursor < sizeof(xprv_buf)) {
-            char c = file.read();
-            if(c == '\n'){
-                break;
-            }
-            xprv_buf[cursor] = c;
-            cursor ++;
+        // read content from the file to buffer
+        size_t len = file.available();
+        if(len > sizeof(xprv_buf)){
+            len = sizeof(xprv_buf);
         }
+        file.read(xprv_buf, len);
         // close the file
         file.close();
         // import hd key from buffer
         HDPrivateKey imported_hd(xprv_buf);
-        if(imported_hd.isValid()){ // check if parsing was successfull
+        if(imported_hd){ // check if parsing was successfull
             Serial.println("success: private key loaded");
             // we will use bip44: m/44'/coin'/0' 
             // coin = 1 for testnet, 0 for mainnet
@@ -197,10 +163,6 @@ void get_address(char * cmd, bool change=false){
     String addr = hd.child(change).child(index).privateKey.address();
     Serial.println(addr);
     show(addr);
-}
-
-void unknown_command(const char * cmd){
-    Serial.println("error: unknown command");
 }
 
 void parseCommand(char * cmd){
@@ -224,7 +186,7 @@ void parseCommand(char * cmd){
         get_address(cmd + strlen("changeaddr"), true);
         return;
     }
-    unknown_command(cmd);
+    Serial.println("error: unknown command");
 }
 
 void setup() {
@@ -238,6 +200,7 @@ void setup() {
     show("I am alive!");
     // serial connection
     Serial.begin(9600);
+    // loading master private key
     load_xprv();
     while(!Serial){
         ; // wait for serial port to open
@@ -248,6 +211,8 @@ void setup() {
 void loop() {
     // reads serial port
     while(Serial.available()){
+        // stores new request
+        char buf[4000] = { 0 };
         // reads a line to buf
         Serial.readBytesUntil('\n', buf, sizeof(buf));
         // parses the command and does something
