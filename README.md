@@ -17,6 +17,8 @@ A manual on how to make it more secure will follow.
 - USB cable
 - SD card (16 GB or less work fine, not sure about larger)
 
+If you don't have an OLED screen you can try it out with [serial only wallet](./serial_only_wallet/serial_only_wallet.ino).
+
 ## Uploading firmware
 
 Follow the manuals from Adafruit to set up the board and OLED screen:
@@ -50,3 +52,5 @@ This sketch will evolve, we would love to add:
 - encryption of the key on the SD card
 - mnemonic support
 - [PSBT](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) support
+- multisig support
+- electrum plugin
