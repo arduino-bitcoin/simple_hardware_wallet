@@ -125,7 +125,6 @@ void load_xprv(){
             // we will use bip44: m/44'/coin'/0' 
             // coin = 1 for testnet, 0 for mainnet
             hd = imported_hd.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
-            // hd.type = P2WPKH;
             Serial.println(hd.xpub()); // print xpub to serial
         }else{
             Serial.println("error: can't parse xprv.txt");

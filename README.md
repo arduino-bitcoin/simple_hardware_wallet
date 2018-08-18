@@ -41,7 +41,7 @@ Available commands:
 - `xpub` - returns a master public key that you can import to electrum or any other watch-only wallet
 - `addr <n>`, for example `addr 5` - returns a receiving address derived from xpub `/0/n/`, also shows it on the OLED screen
 - `changeaddr <n>` - returns a change address derived from xpub `/1/n/` and shows it on the OLED screen
-- `sign_tx <unsigned_tx_from_electrum>` - parses unsigned transaction, asks user for confirmation showing outputs one at a time. User can scroll to another output with button B, confirm with button A and cancel with button C. If user confirmed, wallet will sign a transaction and send it back via serial in hex format. This transaction can be broadcasted to the network from electrum console using `broadcast("<signed_tx>")` command.
+- `sign_tx <unsigned_tx_from_electrum>` - parses unsigned transaction, asks user for confirmation showing outputs one at a time. User can scroll to another output with button B, confirm with button A and cancel with button C. If user confirmed, wallet will sign a transaction and send it back via serial in hex format. This transaction can be broadcasted to the network from electrum console using `broadcast("<signed_tx>")` command or just go to [blockcypher](https://live.blockcypher.com/btc-testnet/pushtx/) and broadcast it there.
 
 ## Future development
 
