@@ -13,7 +13,7 @@ This sketch will evolve, we would love to add:
 - native segwit and segwit nested in p2sh support
 - generation of a new key
 - encryption of the key on the SD card
-- mnemonic codes support
+- mnemonic support
 - [PSBT](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) support
 
 ## Required hardware

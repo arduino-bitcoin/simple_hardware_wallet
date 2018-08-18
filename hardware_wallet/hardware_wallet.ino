@@ -30,6 +30,10 @@ void show(String msg, bool done=true){
     }
 }
 
+// This function displays info about transaction.
+// As OLED screen is small we show one output at a time
+// and use Button B to switch to the next output
+// Buttons A and C work as Confirm and Cancel
 bool requestTransactionSignature(Transaction tx){
     // when digital pins are set with INPUT_PULLUP in the setup
     // they show 1 when not pressed, so we need to invert them
@@ -39,6 +43,7 @@ bool requestTransactionSignature(Transaction tx){
     int i = 0; // index of output that we show
     // waiting for user to confirm / cancel
     while((!confirm && !not_confirm)){
+        // show one output on the screen
         oled.clearDisplay();
         oled.setCursor(0,0);
         oled.print("Sign? Output ");
@@ -106,8 +111,15 @@ void sign_tx(char * cmd){
             // serialize() will add script len varint in the beginning
             // serializeScript will give only script content
             size_t scriptLen = tx.txIns[i].scriptSig.serializeScript(arr, sizeof(arr));
-            // TODO: compare xpub to ours
-            // for now just grab two indexes for derivation
+            // it's enough to compare public keys of hd keys
+            byte sec[33];
+            hd.privateKey.publicKey().sec(sec, 33);
+            if(memcmp(sec, arr+50, 33) != 0){
+                Serial.print("error: wrong key on input ");
+                Serial.println(i);
+                show("Wrong master pubkey!");
+                return;
+            }
             int index1 = littleEndianToInt(arr+scriptLen-4, 2);
             int index2 = littleEndianToInt(arr+scriptLen-2, 2);
             tx.signInput(i, hd.child(index1).child(index2).privateKey);
