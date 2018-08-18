@@ -1,5 +1,5 @@
 {
-  "name": "Simple hardware wallet for Arduino ui",
+  "name": "webusb",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

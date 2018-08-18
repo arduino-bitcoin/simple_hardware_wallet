@@ -1,4 +1,4 @@
-# Simple hardware wallet for Arduino User Interface
+# Simple hardware wallet for Arduino Web Usd
 
 ## Available Scripts
 
