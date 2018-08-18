@@ -1,4 +1,4 @@
-# Simple hardware wallet for Arduino Web Usd
+# React UI for simple-hardware-wallet
 
 ## Available Scripts
 
