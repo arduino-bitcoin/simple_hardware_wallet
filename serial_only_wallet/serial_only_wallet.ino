@@ -125,7 +125,7 @@ void load_xprv(){
             // we will use bip44: m/44'/coin'/0' 
             // coin = 1 for testnet, 0 for mainnet
             hd = imported_hd.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
-            show(hd); // show xprv on the screen
+            // hd.type = P2WPKH;
             Serial.println(hd.xpub()); // print xpub to serial
         }else{
             Serial.println("error: can't parse xprv.txt");
@@ -138,7 +138,7 @@ void load_xprv(){
 void get_address(char * cmd, bool change=false){
     String s(cmd);
     int index = s.toInt();
-    String addr = hd.child(change).child(index).privateKey.address();
+    String addr = hd.child(change).child(index).address();
     Serial.println(addr);
     show(addr);
 }
