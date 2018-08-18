@@ -8,14 +8,6 @@ It should be used only for educational or testing purposes as default Arduino bo
 
 A manual on how to make it more secure will follow.
 
-This sketch will evolve, we would love to add:
-
-- native segwit and segwit nested in p2sh support
-- generation of a new key
-- encryption of the key on the SD card
-- mnemonic support
-- [PSBT](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) support
-
 ## Required hardware
 
 - [Adafruit M0 Adalogger board with SD card](https://www.adafruit.com/product/2796)
@@ -49,3 +41,12 @@ Available commands:
 - `changeaddr <n>` - returns a change address derived from xpub `/1/n/` and shows it on the OLED screen
 - `sign_tx <unsigned_tx_from_electrum>` - parses unsigned transaction, asks user for confirmation showing outputs one at a time. User can scroll to another output with button B, confirm with button A and cancel with button C. If user confirmed, wallet will sign a transaction and send it back via serial in hex format. This transaction can be broadcasted to the network from electrum console using `broadcast("<signed_tx>")` command.
 
+## Future development
+
+This sketch will evolve, we would love to add:
+
+- native segwit and segwit nested in p2sh support
+- generation of a new key
+- encryption of the key on the SD card
+- mnemonic support
+- [PSBT](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki) support
