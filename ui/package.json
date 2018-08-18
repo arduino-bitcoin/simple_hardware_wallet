@@ -1,5 +1,5 @@
 {
-  "name": "Simple hardware wallet for Arduino ui",
+  "name": "ui",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
