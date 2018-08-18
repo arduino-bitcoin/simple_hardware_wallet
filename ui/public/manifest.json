@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Arduino hardware wallet ui",
+  "name": "Simple hardware wallet for Arduino user interface",
   "icons": [
     {
       "src": "favicon.ico",
