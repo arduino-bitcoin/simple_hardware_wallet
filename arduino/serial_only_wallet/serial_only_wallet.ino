@@ -1,12 +1,6 @@
 // bitcoin library
 #include <Bitcoin.h>
 
-// screen libs
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Adafruit_FeatherOLED.h>
-
 // SD card libs
 #include <SPI.h>
 #include <SD.h>
@@ -14,68 +8,39 @@
 // private key
 HDPrivateKey hd;
 
-// the screen
-Adafruit_FeatherOLED oled = Adafruit_FeatherOLED();
-
 // set to false to use on mainnet
 #define USE_TESTNET true
 
-// cleans the display and shows message on the screen
 void show(String msg, bool done=true){
-    oled.clearDisplay();
-    oled.setCursor(0,0);
-    oled.println(msg);
-    if(done){
-        oled.display();
-    }
+    Serial.println(msg);
 }
 
-// This function displays info about transaction.
-// As OLED screen is small we show one output at a time
-// and use Button B to switch to the next output
-// Buttons A and C work as Confirm and Cancel
 bool requestTransactionSignature(Transaction tx){
-    // when digital pins are set with INPUT_PULLUP in the setup
-    // they show 1 when not pressed, so we need to invert them
-    bool confirm = !digitalRead(9);
-    bool not_confirm = !digitalRead(5);
-    bool more_info = !digitalRead(6);
-    int i = 0; // index of output that we show
-    // waiting for user to confirm / cancel
-    while((!confirm && !not_confirm)){
-        // show one output on the screen
-        oled.clearDisplay();
-        oled.setCursor(0,0);
-        oled.print("Sign? Output ");
-        oled.print(i);
-        oled.println();
+    // clean serial buffer
+    while(Serial.available()){
+        Serial.read();
+    }
+    Serial.println("Sign transaction?");
+    for(int i=0; i<tx.outputsNumber; i++){
         TransactionOutput output = tx.txOuts[i];
-        oled.print(output.address(USE_TESTNET));
-        oled.println(":");
-        oled.print(((float)output.amount)/100000);
-        oled.print(" mBTC");
-        oled.display();
-        // waiting user to press any button
-        while((!confirm && !not_confirm && !more_info)){
-            confirm = !digitalRead(9);
-            not_confirm = !digitalRead(5);
-            more_info = !digitalRead(6);
-        }
-        delay(300); // wait to release the button
-        more_info = false; // reset to default
-        // scrolling output
-        i++;
-        if(i >= tx.outputsNumber){
-            i=0;
-        }
+        Serial.print("Output ");
+        Serial.println(i);
+        Serial.print(output.address(USE_TESTNET));
+        Serial.print(":");
+        Serial.print(((float)output.amount)/100000);
+        Serial.println(" mBTC");
     }
-    if(confirm){
-        show("Ok, confirmed.\nSigning...");
+    while(!Serial.available()){
+        ;
+    }
+    char c = Serial.read();
+    while(Serial.available()){
+        Serial.read();
+    }
+    if(c == 'y'){
         return true;
-    }else{
-        show("Cancelled");
-        return false;
     }
+    return false;
 }
 
 void sign_tx(char * cmd){
@@ -104,6 +69,7 @@ void sign_tx(char * cmd){
     }
     bool ok = requestTransactionSignature(tx);
     if(ok){
+        show("Ok, signing...");
         for(int i=0; i<tx.inputsNumber; i++){
             // unsigned transaction from electrum has all info in scriptSig:
             // 01ff4c53ff<xpub><2-byte index1><2-byte index2>
@@ -135,10 +101,6 @@ void sign_tx(char * cmd){
 
 void load_xprv(){
     show("Loading private key");
-    if (!SD.begin(4)){
-        Serial.println("error: no SD card");
-        return;
-    }
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
     File file = SD.open("xprv.txt");
@@ -159,7 +121,6 @@ void load_xprv(){
             // we will use bip44: m/44'/coin'/0' 
             // coin = 1 for testnet, 0 for mainnet
             hd = imported_hd.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
-            show(hd); // show xprv on the screen
             Serial.println(hd.xpub()); // print xpub to serial
         }else{
             Serial.println("error: can't parse xprv.txt");
@@ -172,7 +133,7 @@ void load_xprv(){
 void get_address(char * cmd, bool change=false){
     String s(cmd);
     int index = s.toInt();
-    String addr = hd.child(change).child(index).privateKey.address();
+    String addr = hd.child(change).child(index).address();
     Serial.println(addr);
     show(addr);
 }
@@ -202,17 +163,14 @@ void parseCommand(char * cmd){
 }
 
 void setup() {
-    // setting buttons as inputs
-    pinMode(9, INPUT_PULLUP);
-    pinMode(6, INPUT_PULLUP);
-    pinMode(5, INPUT_PULLUP);
-    // screen init
-    oled.init();
-    oled.setBatteryVisible(false);
     show("I am alive!");
     // serial connection
     Serial.begin(9600);
     // loading master private key
+    if (!SD.begin(4)){
+        Serial.println("error: no SD card controller on pin 4");
+        return;
+    }
     load_xprv();
     while(!Serial){
         ; // wait for serial port to open
