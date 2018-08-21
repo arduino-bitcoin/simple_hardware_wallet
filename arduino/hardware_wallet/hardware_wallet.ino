@@ -1,5 +1,6 @@
 // bitcoin library
 #include <Bitcoin.h>
+#include <Hash.h>
 
 // screen libs
 #include <Wire.h>
@@ -11,7 +12,9 @@
 #include <SPI.h>
 #include <SD.h>
 
-// private key
+// root key (master)
+HDPrivateKey rootKey;
+// account key (m/44'/1'/0'/)
 HDPrivateKey hd;
 
 // the screen
@@ -28,6 +31,41 @@ void show(String msg, bool done=true){
     if(done){
         oled.display();
     }
+}
+
+// uses last bit of the analogRead values
+// to generate a random byte
+byte getRandomByte(int analogInput = A0){
+    byte val = 0;
+    for(int i = 0; i < 8; i++){
+        int init = analogRead(analogInput);
+        int count = 0;
+        // waiting for analog value to change
+        while(analogRead(analogInput) == init){
+            ++count;
+        }
+        // if we've got a new value right away 
+        // use last bit of the ADC
+        if (count == 0) { 
+            val = (val << 1) | (init & 0x01);
+        } else { // if not, use last bit of count
+            val = (val << 1) | (count & 0x01);
+        }
+    }
+}
+
+HDPrivateKey getRandomKey(int analogInput = A0){
+    byte seed[64];
+    // fill seed with random bytes
+    for(int i=0; i<sizeof(seed); i++){
+        seed[i] = getRandomByte(analogInput);
+    }
+    // increase randomness by applying sha512
+    // seed -> sha512(seed)
+    sha512(seed, sizeof(seed), seed);
+    HDPrivateKey key;
+    key.fromSeed(seed, sizeof(seed), USE_TESTNET);
+    return key;
 }
 
 // This function displays info about transaction.
@@ -154,7 +192,8 @@ void load_xprv(){
             Serial.println("success: private key loaded");
             // we will use bip44: m/44'/coin'/0' 
             // coin = 1 for testnet, 0 for mainnet
-            hd = imported_hd.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
+            rootKey = imported_hd;
+            hd = rootKey.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
             show(hd); // show xprv on the screen
             Serial.println(hd.xpub()); // print xpub to serial
         }else{
@@ -173,11 +212,21 @@ void get_address(char * cmd, bool change=false){
     show(addr);
 }
 
+void generate_key(){
+    show("Generating new key...");
+    rootKey = getRandomKey();
+    hd = rootKey.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
+    show(hd);
+    Serial.println("success: random key generated");
+    Serial.println(hd.xpub());
+}
+
 void parseCommand(char * cmd){
     if(memcmp(cmd, "sign_tx", strlen("sign_tx"))==0){
         sign_tx(cmd + strlen("sign_tx") + 1);
         return;
     }
+    // TODO: load_xprv <file>
     if(memcmp(cmd, "load_xprv", strlen("load_xprv"))==0){
         load_xprv();
         return;
@@ -194,6 +243,11 @@ void parseCommand(char * cmd){
         get_address(cmd + strlen("changeaddr"), true);
         return;
     }
+    if(memcmp(cmd, "generate_key", strlen("generate_key"))==0){
+        generate_key();
+        return;
+    }
+    // TODO: save_xprv <file>
     Serial.println("error: unknown command");
 }
 
