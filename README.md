@@ -17,7 +17,7 @@ A manual on how to make it more secure will follow.
 - USB cable
 - SD card (16 GB or less work fine, not sure about larger)
 
-If you don't have an OLED screen you can try it out with [serial only wallet](./serial_only_wallet/serial_only_wallet.ino).
+If you don't have an OLED screen you can try it out with [serial only wallet](./arduino/serial_only_wallet/serial_only_wallet.ino).
 
 ## Uploading firmware
 
@@ -26,7 +26,7 @@ Follow the manuals from Adafruit to set up the board and OLED screen:
 - [Adding the board to Arduino IDE](https://learn.adafruit.com/adafruit-feather-m0-adalogger/setup)
 - [Installing OLED library](https://learn.adafruit.com/adafruit-oled-featherwing/featheroled-library)
 - Install [arduino-bitcoin](https://github.com/arduino-bitcoin/arduino-bitcoin) library
-- Upload [the sketch](./hardware_wallet/hardware_wallet.ino) to the board
+- Upload [the sketch](./arduino/hardware_wallet/hardware_wallet.ino) to the board
 
 ## Setting up
 

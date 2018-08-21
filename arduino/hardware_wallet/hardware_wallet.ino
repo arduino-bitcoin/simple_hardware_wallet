@@ -208,7 +208,6 @@ void setup() {
     show("I am alive!");
     // serial connection
     Serial.begin(9600);
-
     // loading master private key
     if (!SD.begin(4)){
         Serial.println("error: no SD card controller on pin 4");
