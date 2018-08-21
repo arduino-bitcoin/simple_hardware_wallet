@@ -135,10 +135,6 @@ void sign_tx(char * cmd){
 
 void load_xprv(){
     show("Loading private key");
-    if (!SD.begin(4)){
-        Serial.println("error: no SD card");
-        return;
-    }
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
     File file = SD.open("xprv.txt");
@@ -213,6 +209,10 @@ void setup() {
     // serial connection
     Serial.begin(9600);
     // loading master private key
+    if (!SD.begin(4)){
+        Serial.println("error: no SD card controller on pin 4");
+        return;
+    }
     load_xprv();
     while(!Serial){
         ; // wait for serial port to open
