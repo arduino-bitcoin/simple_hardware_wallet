@@ -1,120 +1,20 @@
+// config file - tune it for hardware you use
+#include "config.h"
+#include "ui.h"
+#include "wallet.h"
+#include "storage.h"
+#include "host.h"
+
 // bitcoin library
 #include <Bitcoin.h>
 #include <Hash.h>
-
-// screen libs
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <Adafruit_FeatherOLED.h>
-
-// SD card libs
-#include <SPI.h>
-#include <SD.h>
 
 // root key (master)
 HDPrivateKey rootKey;
 // account key (m/44'/1'/0'/)
 HDPrivateKey hd;
 
-// the screen
-Adafruit_FeatherOLED oled = Adafruit_FeatherOLED();
-
-// set to false to use on mainnet
-#define USE_TESTNET true
-
-// cleans the display and shows message on the screen
-void show(String msg, bool done=true){
-    oled.clearDisplay();
-    oled.setCursor(0,0);
-    oled.println(msg);
-    if(done){
-        oled.display();
-    }
-}
-
-// uses last bit of the analogRead values
-// to generate a random byte
-byte getRandomByte(int analogInput = A0){
-    byte val = 0;
-    for(int i = 0; i < 8; i++){
-        int init = analogRead(analogInput);
-        int count = 0;
-        // waiting for analog value to change
-        while(analogRead(analogInput) == init){
-            ++count;
-        }
-        // if we've got a new value right away 
-        // use last bit of the ADC
-        if (count == 0) { 
-            val = (val << 1) | (init & 0x01);
-        } else { // if not, use last bit of count
-            val = (val << 1) | (count & 0x01);
-        }
-    }
-}
-
-HDPrivateKey getRandomKey(int analogInput = A0){
-    byte seed[64];
-    // fill seed with random bytes
-    for(int i=0; i<sizeof(seed); i++){
-        seed[i] = getRandomByte(analogInput);
-    }
-    // increase randomness by applying sha512
-    // seed -> sha512(seed)
-    sha512(seed, sizeof(seed), seed);
-    HDPrivateKey key;
-    key.fromSeed(seed, sizeof(seed), USE_TESTNET);
-    return key;
-}
-
-// This function displays info about transaction.
-// As OLED screen is small we show one output at a time
-// and use Button B to switch to the next output
-// Buttons A and C work as Confirm and Cancel
-bool requestTransactionSignature(Transaction tx){
-    // when digital pins are set with INPUT_PULLUP in the setup
-    // they show 1 when not pressed, so we need to invert them
-    bool confirm = !digitalRead(9);
-    bool not_confirm = !digitalRead(5);
-    bool more_info = !digitalRead(6);
-    int i = 0; // index of output that we show
-    // waiting for user to confirm / cancel
-    while((!confirm && !not_confirm)){
-        // show one output on the screen
-        oled.clearDisplay();
-        oled.setCursor(0,0);
-        oled.print("Sign? Output ");
-        oled.print(i);
-        oled.println();
-        TransactionOutput output = tx.txOuts[i];
-        oled.print(output.address(USE_TESTNET));
-        oled.println(":");
-        oled.print(((float)output.amount)/100000);
-        oled.print(" mBTC");
-        oled.display();
-        // waiting user to press any button
-        while((!confirm && !not_confirm && !more_info)){
-            confirm = !digitalRead(9);
-            not_confirm = !digitalRead(5);
-            more_info = !digitalRead(6);
-        }
-        delay(300); // wait to release the button
-        more_info = false; // reset to default
-        // scrolling output
-        i++;
-        if(i >= tx.outputsNumber){
-            i=0;
-        }
-    }
-    if(confirm){
-        show("Ok, confirmed.\nSigning...");
-        return true;
-    }else{
-        show("Cancelled");
-        return false;
-    }
-}
+Host host(Serial);
 
 void sign_tx(char * cmd){
     Transaction tx;
@@ -124,20 +24,20 @@ void sign_tx(char * cmd){
     size_t l = fromHex(cmd, strlen(cmd), raw_tx, sizeof(raw_tx));
     if(l == 0){
         show("can't decode tx from hex");
-        Serial.println("error: can't decode tx from hex");
+        host.error("can't decode tx from hex");
         return;
     }
     // check if transaction is from electrum
     if(memcmp(raw_tx,"EPTF",4)!=0){
         // TODO: add PSBT support
-        Serial.println("error: not electrum transaction");
+        host.error("not electrum transaction");
         return;
     }
     // then we parse transaction
     size_t l_parsed = tx.parse(raw_tx+6, l-6);
     if(l_parsed == 0){
         show("can't parse tx");
-        Serial.println("error: can't parse tx");
+        host.error("can't parse tx");
         return;
     }
     bool ok = requestTransactionSignature(tx);
@@ -153,8 +53,8 @@ void sign_tx(char * cmd){
             byte sec[33];
             hd.privateKey.publicKey().sec(sec, 33);
             if(memcmp(sec, arr+50, 33) != 0){
-                Serial.print("error: wrong key on input ");
-                Serial.println(i);
+                host.error("wrong key on input ");
+                host.println(i);
                 show("Wrong master pubkey!");
                 return;
             }
@@ -163,11 +63,10 @@ void sign_tx(char * cmd){
             tx.signInput(i, hd.child(index1).child(index2).privateKey);
         }
         show("ok, signed");
-        Serial.print("success: ");
-        Serial.println(tx);
+        host.success(tx);
     }else{
         show("cancelled");
-        Serial.println("error: user cancelled");
+        host.error("user cancelled");
     }
 }
 
@@ -189,18 +88,18 @@ void load_xprv(){
         // import hd key from buffer
         HDPrivateKey imported_hd(xprv_buf);
         if(imported_hd){ // check if parsing was successfull
-            Serial.println("success: private key loaded");
+            host.success("private key loaded");
             // we will use bip44: m/44'/coin'/0' 
             // coin = 1 for testnet, 0 for mainnet
             rootKey = imported_hd;
             hd = rootKey.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
             show(hd); // show xprv on the screen
-            Serial.println(hd.xpub()); // print xpub to serial
+            host.println(hd.xpub()); // print xpub to serial
         }else{
-            Serial.println("error: can't parse xprv.txt");
+            host.error("can't parse xprv.txt");
         }
     } else {
-        Serial.println("error: xprv.txt file is missing");
+        host.error("xprv.txt file is missing");
     }
 }
 
@@ -208,7 +107,7 @@ void get_address(char * cmd, bool change=false){
     String s(cmd);
     int index = s.toInt();
     String addr = hd.child(change).child(index).privateKey.address();
-    Serial.println(addr);
+    host.println(addr);
     show(addr);
 }
 
@@ -217,8 +116,8 @@ void generate_key(){
     rootKey = getRandomKey();
     hd = rootKey.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
     show(hd);
-    Serial.println("success: random key generated");
-    Serial.println(hd.xpub());
+    host.success("random key generated");
+    host.println(hd.xpub());
 }
 
 void parseCommand(char * cmd){
@@ -232,7 +131,7 @@ void parseCommand(char * cmd){
         return;
     }
     if(memcmp(cmd, "xpub", strlen("xpub"))==0){
-        Serial.println(hd.xpub());
+        host.println(hd.xpub());
         return;
     }
     if(memcmp(cmd, "addr", strlen("addr"))==0){
@@ -248,23 +147,18 @@ void parseCommand(char * cmd){
         return;
     }
     // TODO: save_xprv <file>
-    Serial.println("error: unknown command");
+    host.error("unknown command");
 }
 
 void setup() {
-    // setting buttons as inputs
-    pinMode(9, INPUT_PULLUP);
-    pinMode(6, INPUT_PULLUP);
-    pinMode(5, INPUT_PULLUP);
-    // screen init
-    oled.init();
-    oled.setBatteryVisible(false);
+    ui_init();
     show("I am alive!");
     // serial connection
+    // after this we can use host everywhere
     Serial.begin(9600);
     // loading master private key
     if (!SD.begin(4)){
-        Serial.println("error: no SD card controller on pin 4");
+        host.error("no SD card controller on pin 4");
         return;
     }
     load_xprv();
@@ -276,11 +170,11 @@ void setup() {
 
 void loop() {
     // reads serial port
-    while(Serial.available()){
+    while(host.available()){
         // stores new request
         char buf[4000] = { 0 };
         // reads a line to buf
-        Serial.readBytesUntil('\n', buf, sizeof(buf));
+        host.readBytesUntil('\n', buf, sizeof(buf));
         // parses the command and does something
         parseCommand(buf);    
         // clear the buffer
