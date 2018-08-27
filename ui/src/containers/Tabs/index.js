@@ -1,6 +1,14 @@
 import React, { Component } from 'react';
 import { Link, withRouter } from 'react-router-dom'
-import './tabs.css';
+
+import { TabsWrapper, Tab } from './styled';
+
+import HistoryUnchecked from '../../assets/img/history_unchecked.svg';
+import HistoryChecked from '../../assets/img/history_checked.svg';
+import ReceiveUnchecked from '../../assets/img/receive_unchecked.svg';
+import ReceiveChecked from '../../assets/img/receive_checked.svg';
+import SendUnchecked from '../../assets/img/send_unchecked.svg';
+import SendChecked from '../../assets/img/send_checked.svg';
 
 const HOMEPAGE_ROUTE = '/';
 const SEND_ROUTE = '/send';
@@ -13,13 +21,35 @@ class Tabs extends Component {
 
   render() {
     return (
-      <div id="tabs-container">
-        <div className="tabs-fragments">
-          <div className={`tab ${this.isActive(HOMEPAGE_ROUTE) ? 'active-tab' : ''}`}><Link to={HOMEPAGE_ROUTE}>TX history</Link></div>
-          <div className={`tab ${this.isActive(SEND_ROUTE) ? 'active-tab' : ''}`}><Link to={SEND_ROUTE}>Send</Link></div>
-          <div className={`tab ${this.isActive(RECEIVE_ROUTE) ? 'active-tab' : ''}`}><Link to={RECEIVE_ROUTE}>Receive</Link></div>
-        </div>
-      </div>
+      <TabsWrapper>
+          <Tab active={this.isActive(HOMEPAGE_ROUTE)}>
+            <Link to={HOMEPAGE_ROUTE}>
+              <img
+                src={this.isActive(HOMEPAGE_ROUTE) ? HistoryChecked : HistoryUnchecked}
+                alt="history"
+              />
+              <span>TX history</span>
+            </Link>
+          </Tab>
+          <Tab active={this.isActive(SEND_ROUTE)} >
+            <Link to={SEND_ROUTE}>
+              <img
+                src={this.isActive(SEND_ROUTE) ? SendChecked : SendUnchecked}
+                alt="send"
+              />
+              <span>Send</span>
+            </Link>
+          </Tab>
+          <Tab active={this.isActive(RECEIVE_ROUTE)}>
+            <Link to={RECEIVE_ROUTE}>
+              <img
+                src={this.isActive(RECEIVE_ROUTE) ? ReceiveChecked : ReceiveUnchecked}
+                alt="receive"
+              />
+              <span>Receive</span>
+            </Link>
+          </Tab>
+      </TabsWrapper>
     );
   }
 }
