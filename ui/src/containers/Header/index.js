@@ -6,15 +6,7 @@ import Chip from '../../assets/img/chip.svg';
 import { Wrapper, Logo, DeviceFragment, DeviceTitle, Connected } from './styled';
 
 class Header extends Component {
-
-  // @dev - checks if the device is connected to the usb port
-  isDeviceConnected() {
-    // TODO: add function that checks if the device is connected
-    return true;
-  }
-
   render() {
-    const isConnected = this.isDeviceConnected();
     return (
       <Wrapper>
         <Logo
@@ -26,9 +18,10 @@ class Header extends Component {
             <span>Device</span>
           </DeviceTitle>
           <Connected
-            isConnected={isConnected}
+            onClick={this.props.isConnected ? this.props.disconnect : this.props.connect}
+            isConnected={this.props.isConnected}
           >
-            {isConnected ? 'Connected' : 'Not connected'}
+            {this.props.isConnected ? 'Connected' : 'Not connected'}
           </Connected>
         </DeviceFragment>
       </Wrapper>
