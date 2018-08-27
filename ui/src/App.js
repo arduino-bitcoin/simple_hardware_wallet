@@ -52,9 +52,6 @@ class App extends Component {
   handleSerialMessage(raw) {
     let textDecoder = new TextDecoder();
     let message = textDecoder.decode(raw);
-    if (!message) {
-      return
-    }
     let [command, payload] = message.split(",");
     if (command === "addr") {
       console.log("received addr message");
