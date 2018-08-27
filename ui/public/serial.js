@@ -17,6 +17,9 @@ var serial = {};
       { 'vendorId': 0x2341, 'productId': 0x804e },
       { 'vendorId': 0x2341, 'productId': 0x804f },
       { 'vendorId': 0x2341, 'productId': 0x8050 },
+      // Feather MO is the next line
+      // Other than this line the entire flie was copied from
+      // arduino-webusb examples
       { 'vendorId': 0x239a, 'productId': 0x800b },
     ];
     return navigator.usb.requestDevice({ 'filters': filters }).then(
