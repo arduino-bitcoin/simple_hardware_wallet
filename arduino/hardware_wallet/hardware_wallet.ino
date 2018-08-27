@@ -1,3 +1,5 @@
+#include <WebUSB.h>
+
 // bitcoin library
 #include <Bitcoin.h>
 #include <Hash.h>
@@ -23,6 +25,12 @@ Adafruit_FeatherOLED oled = Adafruit_FeatherOLED();
 // set to false to use on mainnet
 #define USE_TESTNET true
 
+
+WebUSB WebUSBSerial(1 /* https:// */, "localhost:3000");
+
+#define Serial WebUSBSerial
+
+
 // cleans the display and shows message on the screen
 void show(String msg, bool done=true){
     oled.clearDisplay();
@@ -31,6 +39,11 @@ void show(String msg, bool done=true){
     if(done){
         oled.display();
     }
+}
+
+void send_command(String command, String payload) {
+    String combined = command + String(",") + payload;
+    Serial.println(combined);
 }
 
 // uses last bit of the analogRead values
@@ -208,7 +221,8 @@ void get_address(char * cmd, bool change=false){
     String s(cmd);
     int index = s.toInt();
     String addr = hd.child(change).child(index).privateKey.address();
-    Serial.println(addr);
+    String command = String("addr");
+    send_command(command, addr);
     show(addr);
 }
 

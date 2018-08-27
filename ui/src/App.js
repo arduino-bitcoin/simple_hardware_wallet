@@ -13,6 +13,7 @@ class App extends Component {
     super(props)
     this.state = {
       port: undefined,
+      address: undefined,
     }
   }
 
@@ -22,24 +23,25 @@ class App extends Component {
       console.log('Connecting to ' + port.device_.productName + '...');
       port.connect().then(() => {
         console.log('Connected to port:', port);
-        port.onReceive = data => {
-          let textDecoder = new TextDecoder();
-          console.log(textDecoder.decode(data));
-        }
-        port.onReceiveError = error => {
-          console.log('Receive error: ' + error);
-        };
+        port.onReceive = this.handleSerialMessage.bind(this)
+        port.onReceiveError = this.handleSerialError.bind(this)
+
+        // Try to load our bitcoin address
+        let textEncoder = new TextEncoder();
+        let payload = textEncoder.encode("addr")
+        port.send(payload)
+            .catch(error => console.log("Error requesting Bitcoin address", error))
+
       }, error => {
         console.log('Connection error: ' + error);
-    });
+      });
 
-    // Save the port object on state
-    this.setState({ port })
+      // Save the port object on state
+      this.setState({ port })
 
     }).catch(error => {
       console.log('Connection error: ' + error);
     });
-
   }
 
   disconnect(port) {
@@ -47,12 +49,31 @@ class App extends Component {
     this.setState({ port: undefined });
   }
 
+  handleSerialMessage(raw) {
+    let textDecoder = new TextDecoder();
+    let message = textDecoder.decode(raw);
+    if (!message) {
+      return
+    }
+    let [command, payload] = message.split(",");
+    if (command === "addr") {
+      console.log("received addr message");
+      this.setState({ address: payload })
+    }
+  }
+
+  handleSerialError(error) {
+    console.log('Serial receive error: ' + error);
+  }
+
   renderPage() {
+    let address = this.state.address
     return (
       <Switch>
         <Route exact path="/" component={Homepage} />
         <Route path="/send" component={Send} />
-        <Route path="/receive" component={Receive} />
+        <Route path="/receive" render={props => <Receive {...props} address={address} />}
+        />
       </Switch>
     );
   }
