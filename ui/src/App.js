@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
+
+import { Layout } from './components/common/Layout';
 import './App.css';
 
 import Header from './containers/Header';
@@ -61,12 +63,15 @@ class App extends Component {
     return (
       <BrowserRouter>
         <div className="App">
-            <Header
-                connect={port => this.connect(port)}
-                disconnect={port => this.disconnect(port)}
-                isConnected={!!this.state.port}/>
+          <Header
+              connect={port => this.connect(port)}
+              disconnect={port => this.disconnect(port)}
+              isConnected={!!this.state.port}
+          />
+          <Layout>
             <Tabs location={this.props.location} />
             {this.renderPage()}
+          </Layout>
         </div>
       </BrowserRouter>
     );
