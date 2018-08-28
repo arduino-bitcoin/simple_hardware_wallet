@@ -31,10 +31,14 @@ class App extends Component {
   }
 
   componentDidMount() {
-    // Attempt to reconnect to known devices
+    // Attempt to reconnect
     this.reconnect()
-    // Watch for usb disconnections and handle them
+
+    // Set handler for USB disconnections
     navigator.usb.ondisconnect = this.handleDisconnect.bind(this)
+
+    // Set handler for USB connections
+    navigator.usb.onconnect = this.reconnect.bind(this)
   }
 
   connect() {
