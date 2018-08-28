@@ -130,6 +130,8 @@ bool requestTransactionSignature(Transaction tx){
 }
 
 void sign_tx(char * cmd){
+    String success_command = String("sign_tx");
+    String error_command = String("sign_tx_error");
     Transaction tx;
     // first we need to convert tx from hex
     byte raw_tx[2000];
@@ -137,20 +139,20 @@ void sign_tx(char * cmd){
     size_t l = fromHex(cmd, strlen(cmd), raw_tx, sizeof(raw_tx));
     if(l == 0){
         show("can't decode tx from hex");
-        Serial.println("error: can't decode tx from hex");
+        send_command(error_command, "can't decode tx from hex");
         return;
     }
     // check if transaction is from electrum
     if(memcmp(raw_tx,"EPTF",4)!=0){
         // TODO: add PSBT support
-        Serial.println("error: not electrum transaction");
+        send_command(error_command, "not electrum transaction");
         return;
     }
     // then we parse transaction
     size_t l_parsed = tx.parse(raw_tx+6, l-6);
     if(l_parsed == 0){
         show("can't parse tx");
-        Serial.println("error: can't parse tx");
+        send_command(error_command, "can't parse tx");
         return;
     }
     bool ok = requestTransactionSignature(tx);
@@ -169,6 +171,7 @@ void sign_tx(char * cmd){
                 Serial.print("error: wrong key on input ");
                 Serial.println(i);
                 show("Wrong master pubkey!");
+                send_command(error_command, "Wrong master pubkey!");
                 return;
             }
             int index1 = littleEndianToInt(arr+scriptLen-4, 2);
@@ -176,11 +179,13 @@ void sign_tx(char * cmd){
             tx.signInput(i, hd.child(index1).child(index2).privateKey);
         }
         show("ok, signed");
+        send_command(success_command, tx);
         Serial.print("success: ");
         Serial.println(tx);
     }else{
         show("cancelled");
         Serial.println("error: user cancelled");
+        send_command(error_command, "user cancelled");
     }
 }
 

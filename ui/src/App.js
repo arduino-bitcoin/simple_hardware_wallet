@@ -8,6 +8,17 @@ import Homepage from './containers/Homepage';
 import Send from './containers/Send';
 import Receive from './containers/Receive';
 
+import bitcoin from 'bitcoinjs-lib'
+
+// network should be stored in the app instead
+function buildTx(address, amount, network=bitcoin.networks.testnet) {
+  let builder = new bitcoin.TransactionBuilder(network);
+  // FIXME hard-coded TxIn or now ...
+  builder.addInput("fd38592197a014b527b81da5c232d08c5af651e67c3ce30adb52e99125ed6e42", 0)
+  builder.addOutput(address, amount) 
+  return builder.buildIncomplete().toHex()
+}
+
 class App extends Component {
   constructor(props) {
     super(props)
@@ -48,7 +59,7 @@ class App extends Component {
     // TODO: should tell the device to disconnect?
     this.setState({ port: undefined });
   }
-
+  
   handleSerialMessage(raw) {
     let textDecoder = new TextDecoder();
     let message = textDecoder.decode(raw);
@@ -57,20 +68,41 @@ class App extends Component {
       console.log("received addr message");
       this.setState({ address: payload })
     }
+    else if (command === "sign_tx") {
+      console.log("received tx signature");
+      this.setState({ sign_tx: payload })
+    }
+    else if (command === "sign_tx_error") {
+      console.log("sign_tx error", payload);
+    }
+    else {
+      console.log("unhandled message", message)
+    }
   }
 
   handleSerialError(error) {
     console.log('Serial receive error: ' + error);
   }
 
+  signTx(address, amount) {
+    let unsigned = buildTx(address, amount)
+    let textEncoder = new TextEncoder();
+    let message = "sign_tx " + unsigned
+    this.state.port.send(textEncoder.encode(message))
+      .catch(error => {
+        console.log('Send error: ' + error);
+      });
+  }
+
   renderPage() {
     let address = this.state.address
+    let connected = !!this.state.port
     return (
       <Switch>
         <Route exact path="/" component={Homepage} />
-        <Route path="/send" component={Send} />
-        <Route path="/receive" render={props => <Receive {...props} address={address} />}
-        />
+        <Route path="/send" render={props => <Send {...props} signTx={this.signTx.bind(this)}
+                    connected={connected} />} />
+        <Route path="/receive" render={props => <Receive {...props} address={address} />} />
       </Switch>
     );
   }
