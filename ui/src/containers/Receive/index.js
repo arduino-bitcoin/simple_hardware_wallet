@@ -6,6 +6,8 @@ class Receive extends Component {
     return (
       <div>
         <p>This is the receive container!</p>
+        
+      {!!this.props.address && <p> Your Bitcoin address: {this.props.address}</p>}
       </div>
     );
   }
