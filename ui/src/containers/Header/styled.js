@@ -5,6 +5,8 @@ export const Wrapper = styled.header`
   width: 100%;
   display: inline-block;
   background: white;
+  border-bottom: solid 1px #e8e8e8;
+  margin-bottom: -4px;
 `;
 
 export const Logo = styled.img`
