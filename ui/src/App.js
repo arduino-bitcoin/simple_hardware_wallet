@@ -30,36 +30,61 @@ class App extends Component {
     }
   }
 
-  connect(port) {
-    window.serial.requestPort().then(selectedPort => {
-      var port = selectedPort;
-      console.log('Connecting to ' + port.device_.productName + '...');
-      port.connect().then(() => {
-        console.log('Connected to port:', port);
-        port.onReceive = this.handleSerialMessage.bind(this)
-        port.onReceiveError = this.handleSerialError.bind(this)
+  componentDidMount() {
+    // Attempt to reconnect to known devices
+    this.reconnect()
+    // Watch for usb disconnections and handle them
+    navigator.usb.ondisconnect = this.handleDisconnect.bind(this)
+  }
 
-        // Try to load our bitcoin address
-        let textEncoder = new TextEncoder();
-        let payload = textEncoder.encode("addr")
-        port.send(payload)
-            .catch(error => console.log("Error requesting Bitcoin address", error))
+  connect() {
+    window.serial.requestPort().then(this.handlePort.bind(this))
+  }
 
-      }, error => {
-        console.log('Connection error: ' + error);
-      });
-
-      // Save the port object on state
-      this.setState({ port })
-
-    }).catch(error => {
-      console.log('Connection error: ' + error);
-    });
+  reconnect() {
+    window.serial.getPorts().then(ports => {
+      if (ports.length == 0) {
+        console.log("no ports found")
+      } else {
+        console.log("found ports:", ports)
+        // For now, just connect to the first one
+        this.handlePort(ports[0])
+      }
+    })
   }
 
   disconnect() {
     this.state.port.disconnect();
     this.setState({ port: undefined });
+  }
+
+  handleDisconnect(evt) {
+    if (this.state.port.device_ == evt.device) {
+      // The device has disconnect
+      // We need to update the state to reflect this
+      this.setState({ port: undefined });
+    }
+  }
+
+  handlePort(port) {
+    console.log('Connecting to ' + port.device_.productName + '...');
+    port.connect().then(() => {
+      console.log('Connected to port:', port);
+      port.onReceive = this.handleSerialMessage.bind(this)
+      port.onReceiveError = this.handleSerialError.bind(this)
+
+      // Save the port object on state
+      this.setState({ port })
+
+      // Try to load our bitcoin address
+      let textEncoder = new TextEncoder();
+      let payload = textEncoder.encode("addr")
+      port.send(payload)
+          .catch(error => console.log("Error requesting Bitcoin address", error))
+
+    }, error => {
+      console.log('Connection error: ' + error);
+    });
   }
   
   handleSerialMessage(raw) {
