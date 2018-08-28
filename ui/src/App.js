@@ -44,8 +44,8 @@ class App extends Component {
 
   }
 
-  disconnect(port) {
-    // TODO: should tell the device to disconnect?
+  disconnect() {
+    this.state.port.disconnect();
     this.setState({ port: undefined });
   }
 
@@ -63,15 +63,15 @@ class App extends Component {
     return (
       <BrowserRouter>
         <div className="App">
-          <Header
-              connect={port => this.connect(port)}
-              disconnect={port => this.disconnect(port)}
-              isConnected={!!this.state.port}
-          />
-          <Layout>
-            <Tabs location={this.props.location} />
-            {this.renderPage()}
-          </Layout>
+            <Header
+                connect={port => this.connect(port)}
+                disconnect={() => this.disconnect()}
+                isConnected={!!this.state.port}
+            />
+            <Layout>
+                <Tabs location={this.props.location} />
+                {this.renderPage()}
+              </Layout>
         </div>
       </BrowserRouter>
     );
