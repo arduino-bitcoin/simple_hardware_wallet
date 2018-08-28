@@ -8,6 +8,16 @@ import Homepage from './containers/Homepage';
 import Send from './containers/Send';
 import Receive from './containers/Receive';
 
+import bitcoin from 'bitcoinjs-lib'
+
+function buildTx(address, amount) {
+  let builder = new bitcoin.TransactionBuilder()
+  // FIXME hard-coded TxIn or now ...
+  builder.addInput("fd38592197a014b527b81da5c232d08c5af651e67c3ce30adb52e99125ed6e42", 0)
+  builder.addOutput(address, amount) 
+  return builder.buildIncomplete().toHex()
+}
+
 class App extends Component {
   constructor(props) {
     super(props)
@@ -61,6 +71,14 @@ class App extends Component {
 
   handleSerialError(error) {
     console.log('Serial receive error: ' + error);
+  }
+
+  signTx(address, amount) {
+    let unsigned = buildTx(address, amount)
+    let textEncoder = new TextEncoder();
+    this.state.port.send(textEncoder.encode(unsigned)).catch(error => {
+      console.log('Send error: ' + error);
+    });
   }
 
   renderPage() {
