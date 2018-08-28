@@ -10,8 +10,9 @@ import Receive from './containers/Receive';
 
 import bitcoin from 'bitcoinjs-lib'
 
-function buildTx(address, amount) {
-  let builder = new bitcoin.TransactionBuilder()
+// network should be stored in the app instead
+function buildTx(address, amount, network=bitcoin.networks.testnet) {
+  let builder = new bitcoin.TransactionBuilder(network);
   // FIXME hard-coded TxIn or now ...
   builder.addInput("fd38592197a014b527b81da5c232d08c5af651e67c3ce30adb52e99125ed6e42", 0)
   builder.addOutput(address, amount) 
