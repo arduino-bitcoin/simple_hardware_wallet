@@ -10,9 +10,12 @@ class SendForm extends React.Component {
   }
 
   handleSubmit(event) {
+    event.preventDefault();
     console.log('address=' + this.address.current.value);
     console.log('amount=' + this.amount.current.value);
-    event.preventDefault();
+    const address = this.address.current.value
+    const amount = this.amount.current.value
+    this.props.signTx(address, Number(amount))
   }
 
   render() {
@@ -24,7 +27,7 @@ class SendForm extends React.Component {
         </label>
         <label>
           Amount
-          <input type="text" ref={this.amount} />
+          <input type="number" ref={this.amount} />
         </label>
         <input type="submit" value="Submit" />
       </form>
@@ -37,7 +40,7 @@ class Send extends Component {
     return (
       <div>
         <p>This is the send container!</p>
-        <SendForm />
+      {this.props.connected && <SendForm signTx={this.props.signTx} />}
       </div>
     );
   }

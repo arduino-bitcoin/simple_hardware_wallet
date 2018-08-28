@@ -58,7 +58,7 @@ class App extends Component {
     // TODO: should tell the device to disconnect?
     this.setState({ port: undefined });
   }
-
+  
   handleSerialMessage(raw) {
     let textDecoder = new TextDecoder();
     let message = textDecoder.decode(raw);
@@ -66,6 +66,16 @@ class App extends Component {
     if (command === "addr") {
       console.log("received addr message");
       this.setState({ address: payload })
+    }
+    else if (command === "sign_tx") {
+      console.log("received tx signature");
+      this.setState({ sign_tx: payload })
+    }
+    else if (command === "sign_tx_error") {
+      console.log("sign_tx error", payload);
+    }
+    else {
+      console.log("unhandled message", message)
     }
   }
 
@@ -76,19 +86,22 @@ class App extends Component {
   signTx(address, amount) {
     let unsigned = buildTx(address, amount)
     let textEncoder = new TextEncoder();
-    this.state.port.send(textEncoder.encode(unsigned)).catch(error => {
-      console.log('Send error: ' + error);
-    });
+    let message = "sign_tx " + unsigned
+    this.state.port.send(textEncoder.encode(message))
+      .catch(error => {
+        console.log('Send error: ' + error);
+      });
   }
 
   renderPage() {
     let address = this.state.address
+    let connected = !!this.state.port
     return (
       <Switch>
         <Route exact path="/" component={Homepage} />
-        <Route path="/send" component={Send} />
-        <Route path="/receive" render={props => <Receive {...props} address={address} />}
-        />
+        <Route path="/send" render={props => <Send {...props} signTx={this.signTx.bind(this)}
+                    connected={connected} />} />
+        <Route path="/receive" render={props => <Receive {...props} address={address} />} />
       </Switch>
     );
   }
