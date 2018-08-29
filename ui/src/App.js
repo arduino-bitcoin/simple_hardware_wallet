@@ -62,16 +62,22 @@ class InsightAPI {
     return builder.buildIncomplete().toHex()
   }
   async broadcast(tx){
+    tx = clean(tx);
     console.log("broadcasting tx:", tx);
-    // tx = clean(tx);
-    // let data = new FormData();
-    // data.append('rawtx', tx);
-    // let res = await fetch(this.url + "tx/send", {
-    //   method: "POST",
-    //   mode: "cors",
-    //   body: data,
-    // });
-    // console.log(res);
+    let result = await fetch(this.url + "tx/send", {
+        method: "POST",
+        mode: "cors",
+        cache: "no-cache",
+        credentials: "same-origin", // include, same-origin, *omit
+        headers: {
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        redirect: "follow",
+        referrer: "no-referrer",
+        body: JSON.stringify({rawtx:tx}),
+    })    
+    let text = await result.text();
+    console.log(text);
   }
 }
 
