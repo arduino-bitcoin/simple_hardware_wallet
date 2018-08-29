@@ -27,6 +27,7 @@ class App extends Component {
     this.state = {
       port: undefined,
       address: undefined,
+      buffer: "", // receive buffer from serialport
     }
   }
 
@@ -92,23 +93,39 @@ class App extends Component {
   }
   
   handleSerialMessage(raw) {
+    let buffer = this.state.buffer;
     let textDecoder = new TextDecoder();
     let message = textDecoder.decode(raw);
-    let [command, payload] = message.split(",");
-    if (command === "addr") {
-      console.log("received addr message");
-      this.setState({ address: payload })
+    // append new data to buffer
+    buffer += message;
+    // check if new line character is there
+    let index = buffer.indexOf("\n");
+    if(index < 0){
+      this.setState({ buffer });
+      return;
     }
-    else if (command === "sign_tx") {
-      console.log("received tx signature");
-      this.setState({ sign_tx: payload })
-    }
-    else if (command === "sign_tx_error") {
-      console.log("sign_tx error", payload);
-    }
-    else {
-      console.log("unhandled message", message)
-    }
+    let commands = buffer.split("\n");
+    buffer = commands.pop(); // last unfinished command
+    this.setState({ buffer });
+
+    // going through all the commands
+    commands.forEach(message => {
+      let [command, payload] = message.split(",");
+      if (command === "addr") {
+        console.log("received addr message");
+        this.setState({ address: payload });
+      }
+      else if (command === "sign_tx") {
+        console.log("received tx signature");
+        this.setState({ sign_tx: payload });
+      }
+      else if (command === "sign_tx_error") {
+        console.log("sign_tx error", payload);
+      }
+      else {
+        console.log("unhandled message", message);
+      }
+    });
   }
 
   handleSerialError(error) {

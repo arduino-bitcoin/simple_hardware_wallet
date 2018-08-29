@@ -42,8 +42,7 @@ void show(String msg, bool done=true){
 }
 
 void send_command(String command, String payload) {
-    String combined = command + String(",") + payload;
-    Serial.println(combined);
+    Serial.println(command + "," + payload);
 }
 
 // uses last bit of the analogRead values
@@ -179,8 +178,6 @@ void sign_tx(char * cmd){
                 byte sec[33];
                 hd.privateKey.publicKey().sec(sec, 33);
                 if(memcmp(sec, arr+50, 33) != 0){
-                    Serial.print("error: wrong key on input ");
-                    Serial.println(i);
                     show("Wrong master pubkey!");
                     send_command(error_command, "Wrong master pubkey!");
                     return;
@@ -192,11 +189,8 @@ void sign_tx(char * cmd){
         }
         show("ok, signed");
         send_command(success_command, tx);
-        Serial.print("success: ");
-        Serial.println(tx);
     }else{
         show("cancelled");
-        Serial.println("error: user cancelled");
         send_command(error_command, "user cancelled");
     }
 }
@@ -219,18 +213,17 @@ void load_xprv(){
         // import hd key from buffer
         HDPrivateKey imported_hd(xprv_buf);
         if(imported_hd){ // check if parsing was successfull
-            Serial.println("success: private key loaded");
             // we will use bip44: m/44'/coin'/0' 
             // coin = 1 for testnet, 0 for mainnet
             rootKey = imported_hd;
             hd = rootKey.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
             show(hd); // show xprv on the screen
-            Serial.println(hd.xpub()); // print xpub to serial
+            send_command("load_xprv", hd.xpub()); // print xpub to serial
         }else{
-            Serial.println("error: can't parse xprv.txt");
+            send_command("load_xprv_error", "can't parse xprv.txt");
         }
     } else {
-        Serial.println("error: xprv.txt file is missing");
+        send_command("load_xprv_error", "xprv.txt file is missing");
     }
 }
 
@@ -238,18 +231,16 @@ void get_address(char * cmd, bool change=false){
     String s(cmd);
     int index = s.toInt();
     String addr = hd.child(change).child(index).privateKey.address();
-    String command = String("addr");
-    send_command(command, addr);
+    send_command("addr", addr);
     show(addr);
 }
 
-void generate_key(){
+void generate_key(String command){
     show("Generating new key...");
     rootKey = getRandomKey();
     hd = rootKey.hardenedChild(44).hardenedChild(USE_TESTNET).hardenedChild(0);
     show(hd);
-    Serial.println("success: random key generated");
-    Serial.println(hd.xpub());
+    send_command(command, hd.xpub());
 }
 
 void parseCommand(char * cmd){
@@ -263,7 +254,7 @@ void parseCommand(char * cmd){
         return;
     }
     if(memcmp(cmd, "xpub", strlen("xpub"))==0){
-        Serial.println(hd.xpub());
+        send_command("xpub", hd.xpub());
         return;
     }
     if(memcmp(cmd, "addr", strlen("addr"))==0){
@@ -275,11 +266,11 @@ void parseCommand(char * cmd){
         return;
     }
     if(memcmp(cmd, "generate_key", strlen("generate_key"))==0){
-        generate_key();
+        generate_key("generate_key");
         return;
     }
     // TODO: save_xprv <file>
-    Serial.println("error: unknown command");
+    send_command("error", "unknown command");
 }
 
 void setup() {
@@ -291,14 +282,14 @@ void setup() {
     oled.init();
     oled.setBatteryVisible(false);
     show("I am alive!");
-    // serial connection
-    Serial.begin(9600);
     // loading master private key
     if (!SD.begin(4)){
-        Serial.println("error: no SD card controller on pin 4");
+        // Serial.println("error: no SD card controller on pin 4");
         return;
     }
     load_xprv();
+    // serial connection
+    Serial.begin(9600);
     while(!Serial){
         ; // wait for serial port to open
     }
