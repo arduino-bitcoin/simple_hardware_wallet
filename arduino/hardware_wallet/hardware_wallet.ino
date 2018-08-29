@@ -142,14 +142,20 @@ void sign_tx(char * cmd){
         send_command(error_command, "can't decode tx from hex");
         return;
     }
+    size_t l_parsed;
     // check if transaction is from electrum
-    if(memcmp(raw_tx,"EPTF",4)!=0){
+    if(memcmp(raw_tx,"EPTF",4)==0){
+        // if electrum transaction
+        l_parsed = tx.parse(raw_tx+6, l-6);
+        electrum = true;
+    }else if(memcmp(raw_tx, "PSBT", 4)==0){
         // TODO: add PSBT support
-        send_command(error_command, "not electrum transaction");
+        send_command(error_command, "PSBT is not supported yet");
         return;
+    }else{
+        l_parsed = tx.parse(raw_tx, l);
     }
     // then we parse transaction
-    size_t l_parsed = tx.parse(raw_tx+6, l-6);
     if(l_parsed == 0){
         show("can't parse tx");
         send_command(error_command, "can't parse tx");
@@ -158,24 +164,30 @@ void sign_tx(char * cmd){
     bool ok = requestTransactionSignature(tx);
     if(ok){
         for(int i=0; i<tx.inputsNumber; i++){
-            // unsigned transaction from electrum has all info in scriptSig:
-            // 01ff4c53ff<xpub><2-byte index1><2-byte index2>
-            byte arr[100] = { 0 };
-            // serialize() will add script len varint in the beginning
-            // serializeScript will give only script content
-            size_t scriptLen = tx.txIns[i].scriptSig.serializeScript(arr, sizeof(arr));
-            // it's enough to compare public keys of hd keys
-            byte sec[33];
-            hd.privateKey.publicKey().sec(sec, 33);
-            if(memcmp(sec, arr+50, 33) != 0){
-                Serial.print("error: wrong key on input ");
-                Serial.println(i);
-                show("Wrong master pubkey!");
-                send_command(error_command, "Wrong master pubkey!");
-                return;
+            // default path if we get raw tx without derivation path
+            int index1 = 0;
+            int index2 = 0;
+            // if electrum transaction
+            if(electrum){
+                // unsigned transaction from electrum has all info in scriptSig:
+                // 01ff4c53ff<xpub><2-byte index1><2-byte index2>
+                byte arr[100] = { 0 };
+                // serialize() will add script len varint in the beginning
+                // serializeScript will give only script content
+                size_t scriptLen = tx.txIns[i].scriptSig.serializeScript(arr, sizeof(arr));
+                // it's enough to compare public keys of hd keys
+                byte sec[33];
+                hd.privateKey.publicKey().sec(sec, 33);
+                if(memcmp(sec, arr+50, 33) != 0){
+                    Serial.print("error: wrong key on input ");
+                    Serial.println(i);
+                    show("Wrong master pubkey!");
+                    send_command(error_command, "Wrong master pubkey!");
+                    return;
+                }
+                index1 = littleEndianToInt(arr+scriptLen-4, 2);
+                index2 = littleEndianToInt(arr+scriptLen-2, 2);
             }
-            int index1 = littleEndianToInt(arr+scriptLen-4, 2);
-            int index2 = littleEndianToInt(arr+scriptLen-2, 2);
             tx.signInput(i, hd.child(index1).child(index2).privateKey);
         }
         show("ok, signed");
