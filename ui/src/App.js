@@ -19,7 +19,7 @@ function clean(str){
 class InsightAPI {
   constructor(options){
     let defaults = {
-      url: "https://test-insight.bitpay.com/api/", 
+      url: "https://test-insight.bitpay.com/api/",
       network: bitcoin.networks.testnet,
     };
     Object.assign(this, defaults, options);
@@ -75,7 +75,7 @@ class InsightAPI {
         redirect: "follow",
         referrer: "no-referrer",
         body: JSON.stringify({rawtx:tx}),
-    })    
+    })
     let text = await result.text();
     console.log(text);
   }
@@ -152,7 +152,7 @@ class App extends Component {
       console.log('Connection error: ' + error);
     });
   }
-  
+
   handleSerialMessage(raw) {
     let buffer = this.state.buffer;
     let textDecoder = new TextDecoder();
@@ -230,7 +230,7 @@ class App extends Component {
             <Layout>
                 <Tabs location={this.props.location} />
                 {this.renderPage()}
-              </Layout>
+            </Layout>
         </div>
       </BrowserRouter>
     );
