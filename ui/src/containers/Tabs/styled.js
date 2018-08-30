@@ -22,7 +22,7 @@ export const Tab = styled.div`
   color: #637280;
   font-size: 13.7px;
   letter-spacing: 0.1px;
-  color: #637280;
+  color: #C0C5D2;
   position: relative;
 
 
@@ -34,6 +34,9 @@ export const Tab = styled.div`
   }}
 
   > a {
+  float: left;
+    width: 100%;
+    height: 100%;
     text-decoration: none;
     color: inherit;
 
@@ -45,10 +48,20 @@ export const Tab = styled.div`
 
   img  {
     position: absolute;
-    left: 30px;
-    top: calc(50% - 9px);
-    height: 18px;
-    width: 18px;
+    height: ${(props) => props.imgSize || '18px'};
+    width: ${(props) => props.imgSize || '18px'};
+    top: 50%;
+    transform: translateY(-50%);
+
+    ${(props) => {
+      if(props.active) {
+        return 'left: 28px;'
+    } else {
+        return 'left: 30px;';
+    }
+
+    }}
+
 
   }
 

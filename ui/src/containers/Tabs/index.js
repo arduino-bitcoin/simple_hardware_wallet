@@ -21,35 +21,44 @@ class Tabs extends Component {
 
   render() {
     return (
-      <TabsWrapper>
-          <Tab active={this.isActive(HOMEPAGE_ROUTE)}>
-            <Link to={HOMEPAGE_ROUTE}>
-              <img
-                src={this.isActive(HOMEPAGE_ROUTE) ? HistoryChecked : HistoryUnchecked}
-                alt="history"
-              />
-              <span>TX history</span>
-            </Link>
-          </Tab>
-          <Tab active={this.isActive(SEND_ROUTE)} >
-            <Link to={SEND_ROUTE}>
-              <img
-                src={this.isActive(SEND_ROUTE) ? SendChecked : SendUnchecked}
-                alt="send"
-              />
-              <span>Send</span>
-            </Link>
-          </Tab>
-          <Tab active={this.isActive(RECEIVE_ROUTE)}>
-            <Link to={RECEIVE_ROUTE}>
-              <img
-                src={this.isActive(RECEIVE_ROUTE) ? ReceiveChecked : ReceiveUnchecked}
-                alt="receive"
-              />
-              <span>Receive</span>
-            </Link>
-          </Tab>
-      </TabsWrapper>
+        <TabsWrapper>
+            <Tab
+                active={this.isActive(HOMEPAGE_ROUTE)}
+                imgSize="17px"
+            >
+                <Link to={HOMEPAGE_ROUTE}>
+                    <img
+                        src={this.isActive(HOMEPAGE_ROUTE) ? HistoryChecked : HistoryUnchecked}
+                        alt="history"
+                    />
+                    <span>TX history</span>
+                </Link>
+            </Tab>
+            <Tab
+                active={this.isActive(SEND_ROUTE)}
+                imgSize="24px"
+            >
+                <Link to={SEND_ROUTE}>
+                    <img
+                        src={this.isActive(SEND_ROUTE) ? SendChecked : SendUnchecked}
+                        alt="send"
+                    />
+                    <span>Send</span>
+                </Link>
+            </Tab>
+            <Tab
+                active={this.isActive(RECEIVE_ROUTE)}
+                imgSize="24px"
+            >
+                <Link to={RECEIVE_ROUTE}>
+                    <img
+                        src={this.isActive(RECEIVE_ROUTE) ? ReceiveChecked : ReceiveUnchecked}
+                        alt="receive"
+                    />
+                    <span>Receive</span>
+                </Link>
+            </Tab>
+        </TabsWrapper>
     );
   }
 }
