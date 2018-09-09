@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import Proptypes from 'prop-types';
-import { TransactionsWrapper, Header, Cell, BigCell } from './styled';
+import { TransactionsWrapper, Header, Cell, BigCell, Status } from './styled';
 
 import SendTransactionIcon from '../../assets/img/send_transaction.svg';
 import ReceiveTransactionIcon from '../../assets/img/receive_transaction.svg';
@@ -67,15 +67,16 @@ const testTrans = {
 class TransactionsGrid extends Component {
 
   //  @dev - Display the transactions
+  //  TODO remoce mock data
   renderTransactions(transactions) {
     return [testTrans, testTrans].map((transaction, index) => {
-      console.log(transaction, index);
-      const isSendTransaction = true;
-      const imgSrc = index % 2 === 0 ? SendTransactionIcon : ReceiveTransactionIcon;
+
+      //  TODO - change this to real data
+      const isSendTransaction = index % 2 === 0;
+      const imgSrc = isSendTransaction ? SendTransactionIcon : ReceiveTransactionIcon;
 
       const transactionTime = new Date(transaction.time * 1000);
-      var options = { hour: '2-digit', minute: '2-digit' };
-
+      const timeOptions = { hour: '2-digit', minute:'2-digit' };
       return [
         <BigCell
           key={`id-${index}`}
@@ -92,7 +93,7 @@ class TransactionsGrid extends Component {
         <Cell
           key={`time-${index}`}
         >
-          {transactionTime.toLocaleString(options)}
+          {transactionTime.toLocaleTimeString(navigator.language, timeOptions)}
         </Cell>,
         <Cell
           key={`date-${index}`}
@@ -107,10 +108,24 @@ class TransactionsGrid extends Component {
         <Cell
           key={`statur-${index}`}
         >
-          56
+          {this.renderTransactionStatus(transaction.confirmations)}
         </Cell>,
       ];
     })
+  }
+
+  renderTransactionStatus(confirmations = 0, isSendTransaction) {
+    if (confirmations < 6) {
+      return <Status color="#f79015">Pending</Status>;
+    }
+
+    if (confirmations === 6) {
+      return <Status color="#0077ff">6 confirmations</Status>;
+    }
+
+    const msg = isSendTransaction ? 'Sent' : 'Received';
+
+    return <Status color="#0077ff">{msg}</Status>;
   }
 
   render() {

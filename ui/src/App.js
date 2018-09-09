@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
 
+import bitcoin from 'bitcoinjs-lib';
+
 import { Layout } from './components/common/Layout';
 import './App.css';
 
@@ -9,8 +11,6 @@ import Tabs from './containers/Tabs';
 import Homepage from './containers/Homepage';
 import Send from './containers/Send';
 import Receive from './containers/Receive';
-
-import bitcoin from 'bitcoinjs-lib'
 
 function clean(str){
   return str.replace(/[^0-9a-z]/gi, '');
@@ -24,16 +24,19 @@ class InsightAPI {
     };
     Object.assign(this, defaults, options);
   }
+
   async balance(address){
     let result = await fetch(this.url + "addr/" + address);
     let json = await result.json();
     return json.balanceSat + json.unconfirmedBalanceSat;
   }
+
   async utxo(address){
     let result = await fetch(this.url + "addr/" + address + "/utxo");
     let json = await result.json();
     return json;
   }
+
   async buildTx(my_address, address, amount, fee=1500){
     // cleaning up random characters
     address = clean(address);
@@ -61,10 +64,11 @@ class InsightAPI {
     builder.addOutput(my_address, total - amount - fee); // change
     return builder.buildIncomplete().toHex()
   }
+
   async broadcast(tx){
     tx = clean(tx);
     console.log("broadcasting tx:", tx);
-    let result = await fetch(this.url + "tx/send", {
+    const result = await fetch(this.url + "tx/send", {
         method: "POST",
         mode: "cors",
         cache: "no-cache",
@@ -74,9 +78,9 @@ class InsightAPI {
         },
         redirect: "follow",
         referrer: "no-referrer",
-        body: JSON.stringify({rawtx:tx}),
+        body: JSON.stringify({ rawtx: tx }),
     })
-    let text = await result.text();
+    const text = await result.text();
     console.log(text);
   }
 }
@@ -94,27 +98,27 @@ class App extends Component {
 
   componentDidMount() {
     // Attempt to reconnect
-    this.reconnect()
+    this.reconnect();
 
     // Set handler for USB disconnections
-    navigator.usb.ondisconnect = this.handleDisconnect.bind(this)
+    navigator.usb.ondisconnect = this.handleDisconnect.bind(this);
 
     // Set handler for USB connections
-    navigator.usb.onconnect = this.reconnect.bind(this)
+    navigator.usb.onconnect = this.reconnect.bind(this);
   }
 
   connect() {
-    window.serial.requestPort().then(this.handlePort.bind(this))
+    window.serial.requestPort().then(this.handlePort.bind(this));
   }
 
   reconnect() {
     window.serial.getPorts().then(ports => {
       if (ports.length === 0) {
-        console.log("no ports found")
+        console.log("no ports found");
       } else {
-        console.log("found ports:", ports)
+        console.log("found ports:", ports);
         // For now, just connect to the first one
-        this.handlePort(ports[0])
+        this.handlePort(ports[0]);
       }
     })
   }
@@ -136,15 +140,15 @@ class App extends Component {
     console.log('Connecting to ' + port.device_.productName + '...');
     port.connect().then(() => {
       console.log('Connected to port:', port);
-      port.onReceive = this.handleSerialMessage.bind(this)
-      port.onReceiveError = this.handleSerialError.bind(this)
+      port.onReceive = this.handleSerialMessage.bind(this);
+      port.onReceiveError = this.handleSerialError.bind(this);
 
       // Save the port object on state
       this.setState({ port })
 
       // Try to load our bitcoin address
-      let textEncoder = new TextEncoder();
-      let payload = textEncoder.encode("addr")
+      const textEncoder = new TextEncoder();
+      const payload = textEncoder.encode("addr");
       port.send(payload)
           .catch(error => console.log("Error requesting Bitcoin address", error))
 
@@ -155,8 +159,8 @@ class App extends Component {
 
   handleSerialMessage(raw) {
     let buffer = this.state.buffer;
-    let textDecoder = new TextDecoder();
-    let message = textDecoder.decode(raw);
+    const textDecoder = new TextDecoder();
+    const message = textDecoder.decode(raw);
     // append new data to buffer
     buffer += message;
     // check if new line character is there
@@ -196,9 +200,9 @@ class App extends Component {
   }
 
   async signTx(address, amount) {
-    let unsigned = await this.state.blockchain.buildTx(this.state.address, address, amount)
-    let textEncoder = new TextEncoder();
-    let message = "sign_tx " + unsigned
+    const unsigned = await this.state.blockchain.buildTx(this.state.address, address, amount)
+    const textEncoder = new TextEncoder();
+    const message = "sign_tx " + unsigned
     this.state.port.send(textEncoder.encode(message))
       .catch(error => {
         console.log('Send error: ' + error);
@@ -206,8 +210,8 @@ class App extends Component {
   }
 
   renderPage() {
-    let address = this.state.address
-    let connected = !!this.state.port
+    const address = this.state.address;
+    const connected = !!this.state.port;
     return (
       <Switch>
         <Route exact path="/" component={Homepage} />

@@ -47,3 +47,16 @@ export const BigCell = styled(Cell)`
     overflow: hidden;
   }
 `;
+
+export const Status = styled.div`
+  padding: 0 17px;
+  height: 28px;
+  font-family: Lato;
+  border-radius: 3.6px;
+  font-size: 13px;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  background-color: ${(props) => props.color || '#cf5757'};
+  float: right;
+`;

@@ -11,9 +11,9 @@ class SendForm extends React.Component {
 
   handleSubmit(event) {
     event.preventDefault();
-    const address = this.address.current.value
-    const amount = this.amount.current.value
-    this.props.signTx(address, Number(amount))
+    const address = this.address.current.value;
+    const amount = this.amount.current.value;
+    this.props.signTx(address, Number(amount));
   }
 
   render() {
