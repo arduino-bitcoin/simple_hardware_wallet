@@ -1,13 +1,17 @@
 import React, { Component } from 'react';
-import './homepage.css';
+import { HomepageWrapper, Title, TransactionsFragment } from './styled';
 
 class Homepage extends Component {
   render() {
     return (
-      <div>
-        <p>This is the homepage container!</p>
-        <p>Here we will see the transactions history</p>
-      </div>
+      <HomepageWrapper>
+        <Title>
+          Recents transactions
+        </Title>
+        <TransactionsFragment>
+
+        </TransactionsFragment>
+      </HomepageWrapper>
     );
   }
 }
