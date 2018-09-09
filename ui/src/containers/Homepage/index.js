@@ -1,6 +1,9 @@
 import React, { Component } from 'react';
 import { HomepageWrapper, Title, TransactionsFragment } from './styled';
 
+//  Transactions Grid
+import TransactionsGrid from '../../components/Grid/TransactionsGrid';
+
 class Homepage extends Component {
   render() {
     return (
@@ -9,7 +12,9 @@ class Homepage extends Component {
           Recents transactions
         </Title>
         <TransactionsFragment>
-
+          <TransactionsGrid
+            transactions={[]}
+          />
         </TransactionsFragment>
       </HomepageWrapper>
     );

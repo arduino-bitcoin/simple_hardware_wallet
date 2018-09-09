@@ -109,7 +109,7 @@ class App extends Component {
 
   reconnect() {
     window.serial.getPorts().then(ports => {
-      if (ports.length == 0) {
+      if (ports.length === 0) {
         console.log("no ports found")
       } else {
         console.log("found ports:", ports)
@@ -125,7 +125,7 @@ class App extends Component {
   }
 
   handleDisconnect(evt) {
-    if (this.state.port.device_ == evt.device) {
+    if (this.state.port.device_ === evt.device) {
       // The device has disconnect
       // We need to update the state to reflect this
       this.setState({ port: undefined });

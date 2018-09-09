@@ -23,4 +23,8 @@ export const TransactionsFragment = styled.div`
   background: white;
   border-radius: 3.5px;
   border: solid 1px #ebedf8;
+
+  >div {
+    padding: 50px;
+  }
 `;
