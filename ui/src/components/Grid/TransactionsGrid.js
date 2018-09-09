@@ -67,7 +67,7 @@ const testTrans = {
 class TransactionsGrid extends Component {
 
   //  @dev - Display the transactions
-  //  TODO remoce mock data
+  //  TODO remove mock data
   renderTransactions(transactions) {
     return [testTrans, testTrans].map((transaction, index) => {
 
