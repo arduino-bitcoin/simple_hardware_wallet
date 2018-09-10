@@ -67,12 +67,11 @@ const testTrans = {
 class TransactionsGrid extends Component {
 
   //  @dev - Display the transactions
-  //  TODO remove mock data
-  renderTransactions(transactions) {
-    return [testTrans, testTrans].map((transaction, index) => {
+  renderTransactions(transactions = []) {
+    return transactions.map((transaction, index) => {
 
       //  TODO - change this to real data
-      const isSendTransaction = index % 2 === 0;
+      const isSendTransaction = false;
       const imgSrc = isSendTransaction ? SendTransactionIcon : ReceiveTransactionIcon;
 
       const transactionTime = new Date(transaction.time * 1000);

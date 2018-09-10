@@ -31,6 +31,18 @@ class InsightAPI {
     return json.balanceSat + json.unconfirmedBalanceSat;
   }
 
+  async transactions(address){
+    let result = await fetch(this.url + "addr/" + address);
+    let json = await result.json();
+    return json.transactions;
+  }
+
+  async transactionDetails(transactionId){
+    let result = await fetch(this.url + "tx/" + transactionId);
+    let json = await result.json();
+    return json;
+  }
+
   async utxo(address){
     let result = await fetch(this.url + "addr/" + address + "/utxo");
     let json = await result.json();
@@ -93,22 +105,26 @@ class App extends Component {
       address: undefined,
       buffer: "", // receive buffer from serialport
       blockchain: new InsightAPI(),
+      transactions: [],
     }
+
+    this.connect = this.connect.bind(this);
+    this.reconnect = this.reconnect.bind(this);
+    this.handleDisconnect = this.handleDisconnect.bind(this);
+
+    // Set handler for USB disconnections
+    navigator.usb.ondisconnect = this.handleDisconnect;
+
+    // Set handler for USB connections
+    navigator.usb.onconnect = this.reconnect;
   }
 
   componentDidMount() {
-    // Attempt to reconnect
     this.reconnect();
-
-    // Set handler for USB disconnections
-    navigator.usb.ondisconnect = this.handleDisconnect.bind(this);
-
-    // Set handler for USB connections
-    navigator.usb.onconnect = this.reconnect.bind(this);
   }
 
   connect() {
-    window.serial.requestPort().then(this.handlePort.bind(this));
+    window.serial.requestPort().then((port) => this.handlePort(port));
   }
 
   reconnect() {
@@ -193,6 +209,18 @@ class App extends Component {
         console.log("unhandled message", message);
       }
     });
+
+    if (this.state.address) {
+      this.getTransactions(this.state.address)
+        .then((transactions) => {
+          transactions.map((transactionId) => {
+            this.getTransactionDetails(transactionId)
+              .then(
+                (transDetails) => this.setState({ transactions: [...this.state.transactions, transDetails] })
+              );
+          })
+        });
+    }
   }
 
   handleSerialError(error) {
@@ -200,13 +228,21 @@ class App extends Component {
   }
 
   async signTx(address, amount) {
-    const unsigned = await this.state.blockchain.buildTx(this.state.address, address, amount)
+    const unsigned = await this.state.blockchain.buildTx(this.state.address, address, amount);
     const textEncoder = new TextEncoder();
-    const message = "sign_tx " + unsigned
+    const message = "sign_tx " + unsigned;
     this.state.port.send(textEncoder.encode(message))
       .catch(error => {
         console.log('Send error: ' + error);
       });
+  }
+
+  async getTransactions(address) {
+    return await this.state.blockchain.transactions(address);
+  }
+
+  async getTransactionDetails(transactionId) {
+    return await this.state.blockchain.transactionDetails(transactionId);
   }
 
   renderPage() {
@@ -214,7 +250,7 @@ class App extends Component {
     const connected = !!this.state.port;
     return (
       <Switch>
-        <Route exact path="/" component={Homepage} />
+        <Route exact path="/" render={props => <Homepage {...props} transactions={this.state.transactions || []} />} />
         <Route path="/send" render={props => <Send {...props} signTx={this.signTx.bind(this)}
                     connected={connected} />} />
         <Route path="/receive" render={props => <Receive {...props} address={address} />} />

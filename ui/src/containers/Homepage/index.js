@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Proptypes from 'prop-types';
 import { HomepageWrapper, Title, TransactionsFragment } from './styled';
 
 //  Transactions Grid
@@ -13,12 +14,16 @@ class Homepage extends Component {
         </Title>
         <TransactionsFragment>
           <TransactionsGrid
-            transactions={[]}
+            transactions={this.props.transactions}
           />
         </TransactionsFragment>
       </HomepageWrapper>
     );
   }
+}
+
+Homepage.proptypes = {
+  transactions: Proptypes.array.isRequired,
 }
 
 export default Homepage;
