@@ -250,7 +250,7 @@ class App extends Component {
     const connected = !!this.state.port;
     return (
       <Switch>
-        <Route exact path="/" render={props => <Homepage {...props} transactions={this.state.transactions || []} />} />
+        <Route exact path="/" render={props => <Homepage {...props} address={address} transactions={this.state.transactions || []} />} />
         <Route path="/send" render={props => <Send {...props} signTx={this.signTx.bind(this)}
                     connected={connected} />} />
         <Route path="/receive" render={props => <Receive {...props} address={address} />} />

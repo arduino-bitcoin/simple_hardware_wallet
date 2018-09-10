@@ -7,6 +7,7 @@ import TransactionsGrid from '../../components/Grid/TransactionsGrid';
 
 class Homepage extends Component {
   render() {
+    const { address, transactions } = this.props;
     return (
       <HomepageWrapper>
         <Title>
@@ -14,7 +15,8 @@ class Homepage extends Component {
         </Title>
         <TransactionsFragment>
           <TransactionsGrid
-            transactions={this.props.transactions}
+            address={address}
+            transactions={transactions}
           />
         </TransactionsFragment>
       </HomepageWrapper>
@@ -23,6 +25,7 @@ class Homepage extends Component {
 }
 
 Homepage.proptypes = {
+  address: Proptypes.string,
   transactions: Proptypes.array.isRequired,
 }
 
