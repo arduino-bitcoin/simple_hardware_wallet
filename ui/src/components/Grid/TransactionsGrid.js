@@ -7,9 +7,28 @@ import ReceiveTransactionIcon from '../../assets/img/receive_transaction.svg';
 
 class TransactionsGrid extends Component {
 
+  calculateValue(myAddress, transaction, isSendTransaction) {
+    let totalValue = 0;
+
+    transaction.vout.map(({ value, scriptPubKey }) => {
+      scriptPubKey.addresses.map((address) => {
+        if (isSendTransaction) {
+          if (address !== myAddress) {
+            totalValue += parseFloat(value);
+          }
+        } else {
+          if (address === myAddress) {
+            totalValue += parseFloat(value);
+          }
+        }
+      })
+    })
+
+   return totalValue;
+  }
+
   //  @dev - Display the transactions
   renderTransactions() {
-
     const { address, transactions } = this.props;
 
     return transactions.map((transaction, index) => {
@@ -46,7 +65,7 @@ class TransactionsGrid extends Component {
         <Cell
           key={`value-${index}`}
         >
-          {transaction.valueOut}
+          {this.calculateValue(address, transaction, isSendTransaction)}
         </Cell>,
         <Cell
           key={`statur-${index}`}
