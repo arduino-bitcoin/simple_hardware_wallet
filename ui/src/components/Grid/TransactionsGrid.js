@@ -31,8 +31,9 @@ class TransactionsGrid extends Component {
   renderTransactions() {
     const { address, transactions } = this.props;
 
-    return transactions.map((transaction, index) => {
-
+    return transactions
+      .sort((a, b) => a.confirmations - b.confirmations)
+      .map((transaction, index) => {
       //  TODO find another way to check if it a received or send transaction
       const isSendTransaction = address === transaction.vin[0].addr;
       const imgSrc = isSendTransaction ? SendTransactionIcon : ReceiveTransactionIcon;

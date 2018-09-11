@@ -211,6 +211,7 @@ class App extends Component {
     });
 
     if (this.state.address) {
+      this.setState({ transactions: [] });
       this.getTransactions(this.state.address)
         .then((transactions) => {
           transactions.map((transactionId) => {
