@@ -58,7 +58,7 @@ class InsightAPI {
 
     let utxo = await this.utxo(my_address);
     let total = 0;
-    for(let i=0; i < utxo.length; i++){
+    for(let i = 0; i < utxo.length; i++){
       let tx = utxo[i];
       total += tx.satoshis;
       builder.addInput(tx.txid, tx.vout);
