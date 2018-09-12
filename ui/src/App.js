@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
 
-import bitcoin from 'bitcoinjs-lib';
+import io from 'socket.io-client'
+import InsightAPI from './services/InsightAPI';
 
 import { Layout } from './components/common/Layout';
 import './App.css';
@@ -11,91 +12,6 @@ import Tabs from './containers/Tabs';
 import Homepage from './containers/Homepage';
 import Send from './containers/Send';
 import Receive from './containers/Receive';
-
-function clean(str){
-  return str.replace(/[^0-9a-z]/gi, '');
-}
-
-class InsightAPI {
-  constructor(options){
-    let defaults = {
-      url: "https://test-insight.bitpay.com/api/",
-      network: bitcoin.networks.testnet,
-    };
-    Object.assign(this, defaults, options);
-  }
-
-  async balance(address){
-    let result = await fetch(this.url + "addr/" + address);
-    let json = await result.json();
-    return json.balanceSat + json.unconfirmedBalanceSat;
-  }
-
-  async transactions(address){
-    let result = await fetch(this.url + "addr/" + address);
-    let json = await result.json();
-    return json.transactions;
-  }
-
-  async transactionDetails(transactionId){
-    let result = await fetch(this.url + "tx/" + transactionId);
-    let json = await result.json();
-    return json;
-  }
-
-  async utxo(address){
-    let result = await fetch(this.url + "addr/" + address + "/utxo");
-    let json = await result.json();
-    return json;
-  }
-
-  async buildTx(my_address, address, amount, fee=1500){
-    // cleaning up random characters
-    address = clean(address);
-    my_address = clean(my_address);
-
-    let builder = new bitcoin.TransactionBuilder(this.network);
-
-    let utxo = await this.utxo(my_address);
-    let total = 0;
-    for(let i = 0; i < utxo.length; i++){
-      let tx = utxo[i];
-      total += tx.satoshis;
-      builder.addInput(tx.txid, tx.vout);
-      if(total > amount+fee){
-        break;
-      }
-    }
-    if(total < amount+fee){
-      throw "Not enough funds";
-    }
-    console.log(address, amount, address.length);
-    console.log(my_address, total - amount - fee, my_address.length);
-
-    builder.addOutput(address, amount);
-    builder.addOutput(my_address, total - amount - fee); // change
-    return builder.buildIncomplete().toHex()
-  }
-
-  async broadcast(tx){
-    tx = clean(tx);
-    console.log("broadcasting tx:", tx);
-    const result = await fetch(this.url + "tx/send", {
-        method: "POST",
-        mode: "cors",
-        cache: "no-cache",
-        credentials: "same-origin", // include, same-origin, *omit
-        headers: {
-            "Content-Type": "application/json; charset=utf-8",
-        },
-        redirect: "follow",
-        referrer: "no-referrer",
-        body: JSON.stringify({ rawtx: tx }),
-    })
-    const text = await result.text();
-    console.log(text);
-  }
-}
 
 class App extends Component {
   constructor(props) {
@@ -194,8 +110,10 @@ class App extends Component {
       let [command, payload] = message.split(",");
       if (command === "addr") {
         console.log("received addr message");
-        let address = payload.replace(/[^0-9a-z]/gi, '');
+        const address = payload.replace(/[^0-9a-z]/gi, '');
+
         this.setState({ address });
+        this.handleChangeAddress(address);
       }
       else if (command === "sign_tx") {
         console.log("received tx signature");
@@ -210,22 +128,48 @@ class App extends Component {
       }
     });
 
-    if (this.state.address) {
-      this.setState({ transactions: [] });
-      this.getTransactions(this.state.address)
-        .then((transactions) => {
-          transactions.map((transactionId) => {
-            this.getTransactionDetails(transactionId)
-              .then(
-                (transDetails) => this.setState({ transactions: [...this.state.transactions, transDetails] })
-              );
-          })
-        });
-    }
   }
 
   handleSerialError(error) {
     console.log('Serial receive error: ' + error);
+  }
+
+  //  @dev handles setting new address
+  //  We will fetch all the address' transactions and connect to the web socket
+  handleChangeAddress(newAddress, oldAddress = null) {
+
+    //  @dev - If the new address is null, return null
+    if(!newAddress) {
+      return null;
+    }
+
+    //  @dev - If the address is the same, we skip reconnecting to the socket
+    if (newAddress !== oldAddress) {
+
+      const socket = io("https://test-insight.bitpay.com/");
+      //  Start the connection to the bitpay websocket
+      //  TODO as for now we are using the test network, in the future,
+      //  set the network dynamically
+      socket.on('connect', function() {
+        // Join the room.
+        socket.emit('subscribe', 'inv');
+      });
+
+      socket.on('bitcoind/addresstxid', ({ address, txid }) => { return this.addNewTransaction(txid) });
+      socket.on('connect', () => socket.emit('subscribe', 'bitcoind/addresstxid', [ newAddress ]))
+    }
+
+    //  Delete previous transactions
+    this.setState({ transactions: [] });
+
+    //  Fetch all the address' transactions
+    this.getTransactions(newAddress)
+      .then((transactions) => {
+        transactions.map((transactionId) => {
+          this.addNewTransaction(transactionId);
+        })
+      });
+
   }
 
   async signTx(address, amount) {
@@ -244,6 +188,14 @@ class App extends Component {
 
   async getTransactionDetails(transactionId) {
     return await this.state.blockchain.transactionDetails(transactionId);
+  }
+
+  //  @dev - Adds a new transaction to the transactions array
+  //  @params {string} - transaction ID
+  async addNewTransaction(transactionId) {
+    console.log("Fetch new transaction", transactionId);
+    return this.getTransactionDetails(transactionId)
+      .then((transDetails) => this.setState({ transactions: [...this.state.transactions, transDetails] }));
   }
 
   renderPage() {

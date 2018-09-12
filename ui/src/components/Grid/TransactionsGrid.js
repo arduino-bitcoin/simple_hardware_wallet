@@ -11,7 +11,7 @@ class TransactionsGrid extends Component {
     let totalValue = 0;
 
     transaction.vout.map(({ value, scriptPubKey }) => {
-      scriptPubKey.addresses.map((address) => {
+      return scriptPubKey.addresses.map((address) => {
         if (isSendTransaction) {
           if (address !== myAddress) {
             totalValue += parseFloat(value);
@@ -21,6 +21,8 @@ class TransactionsGrid extends Component {
             totalValue += parseFloat(value);
           }
         }
+
+        return totalValue;
       })
     })
 
@@ -78,12 +80,12 @@ class TransactionsGrid extends Component {
   }
 
   renderTransactionStatus(confirmations = 0, isSendTransaction) {
-    if (confirmations < 6) {
+    if (confirmations === 0) {
       return <Status color="#f79015">Pending</Status>;
     }
 
-    if (confirmations === 6) {
-      return <Status color="#7ed321">6 confirmations</Status>;
+    if (confirmations <= 6) {
+      return <Status color="#7ed321">{confirmations} confirmations</Status>;
     }
 
     const msg = isSendTransaction ? 'Sent' : 'Received';
@@ -92,7 +94,6 @@ class TransactionsGrid extends Component {
   }
 
   render() {
-    const { transactions } = this.props;
     return (
       <TransactionsWrapper>
         <Header>description</Header>
