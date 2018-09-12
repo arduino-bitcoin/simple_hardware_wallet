@@ -85,7 +85,7 @@ class TransactionsGrid extends Component {
     }
 
     if (confirmations <= 6) {
-      return <Status color="#7ed321">{confirmations} confirmations</Status>;
+      return <Status color="#7ed321">{`${confirmations} ${confirmations === 1 ? 'confirmation' : 'confirmations'}`} </Status>;
     }
 
     const msg = isSendTransaction ? 'Sent' : 'Received';

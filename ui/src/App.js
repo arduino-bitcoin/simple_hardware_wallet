@@ -155,7 +155,7 @@ class App extends Component {
         socket.emit('subscribe', 'inv');
       });
 
-      socket.on('bitcoind/addresstxid', ({ address, txid }) => { return this.addNewTransaction(txid) });
+      socket.on('bitcoind/addresstxid', ({ address, txid }) => { return this.addTransaction(txid) });
       socket.on('connect', () => socket.emit('subscribe', 'bitcoind/addresstxid', [ newAddress ]))
     }
 
@@ -166,7 +166,7 @@ class App extends Component {
     this.getTransactions(newAddress)
       .then((transactions) => {
         transactions.map((transactionId) => {
-          this.addNewTransaction(transactionId);
+          this.addTransaction(transactionId);
         })
       });
 
@@ -190,12 +190,33 @@ class App extends Component {
     return await this.state.blockchain.transactionDetails(transactionId);
   }
 
-  //  @dev - Adds a new transaction to the transactions array
+  //  @dev - Adds or Updates an transaction in the transactions list
   //  @params {string} - transaction ID
-  async addNewTransaction(transactionId) {
-    console.log("Fetch new transaction", transactionId);
+  async addTransaction(transactionId) {
+    const transactions = this.state.transactions;
     return this.getTransactionDetails(transactionId)
-      .then((transDetails) => this.setState({ transactions: [...this.state.transactions, transDetails] }));
+      .then((transDetails) => {
+
+        //  try to find if there is a transaction with Id equal to the {transactionId}
+        //  If there is, update that transaction with new infromation
+        //  If not add that transaction to the transactions array
+        let isNewTransaction = true;
+        transactions.map((trans, index) => {
+          if (trans.txid === transactionId) {
+
+            console.log("Updating transaction:", transactionId);
+            transactions[index] = transDetails;
+            isNewTransaction = false;
+          }
+        });
+
+        //  Is a new transaction?
+        //  If so add it to the array
+        if (isNewTransaction) {
+          console.log("Inserting transaction:", transactionId);
+          return this.setState({ transactions: [...this.state.transactions, transDetails] })
+        }
+      });
   }
 
   renderPage() {

@@ -37,7 +37,7 @@ class InsightAPI {
     return json;
   }
 
-  async buildTx(my_address, address, amount, fee=1500){
+  async buildTx(my_address, address, amount, fee = 1500){
     // cleaning up random characters
     address = clean(address);
     my_address = clean(my_address);
