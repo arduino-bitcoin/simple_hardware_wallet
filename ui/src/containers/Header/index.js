@@ -14,7 +14,10 @@ class Header extends Component {
         />
         <DeviceFragment>
           <DeviceTitle>
-            <img src={Chip} />
+            <img
+              src={Chip}
+              alt="chip"
+            />
             <span>Device</span>
           </DeviceTitle>
           <Connected

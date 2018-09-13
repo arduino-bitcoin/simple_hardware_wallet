@@ -1,6 +1,9 @@
 import React, { Component } from 'react';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
 
+import io from 'socket.io-client'
+import InsightAPI from './services/InsightAPI';
+
 import { Layout } from './components/common/Layout';
 import './App.css';
 
@@ -10,77 +13,6 @@ import Homepage from './containers/Homepage';
 import Send from './containers/Send';
 import Receive from './containers/Receive';
 
-import bitcoin from 'bitcoinjs-lib'
-
-function clean(str){
-  return str.replace(/[^0-9a-z]/gi, '');
-}
-
-class InsightAPI {
-  constructor(options){
-    let defaults = {
-      url: "https://test-insight.bitpay.com/api/",
-      network: bitcoin.networks.testnet,
-    };
-    Object.assign(this, defaults, options);
-  }
-  async balance(address){
-    let result = await fetch(this.url + "addr/" + address);
-    let json = await result.json();
-    return json.balanceSat + json.unconfirmedBalanceSat;
-  }
-  async utxo(address){
-    let result = await fetch(this.url + "addr/" + address + "/utxo");
-    let json = await result.json();
-    return json;
-  }
-  async buildTx(my_address, address, amount, fee=1500){
-    // cleaning up random characters
-    address = clean(address);
-    my_address = clean(my_address);
-
-    let builder = new bitcoin.TransactionBuilder(this.network);
-
-    let utxo = await this.utxo(my_address);
-    let total = 0;
-    for(let i=0; i < utxo.length; i++){
-      let tx = utxo[i];
-      total += tx.satoshis;
-      builder.addInput(tx.txid, tx.vout);
-      if(total > amount+fee){
-        break;
-      }
-    }
-    if(total < amount+fee){
-      throw "Not enough funds";
-    }
-    console.log(address, amount, address.length);
-    console.log(my_address, total - amount - fee, my_address.length);
-
-    builder.addOutput(address, amount);
-    builder.addOutput(my_address, total - amount - fee); // change
-    return builder.buildIncomplete().toHex()
-  }
-  async broadcast(tx){
-    tx = clean(tx);
-    console.log("broadcasting tx:", tx);
-    let result = await fetch(this.url + "tx/send", {
-        method: "POST",
-        mode: "cors",
-        cache: "no-cache",
-        credentials: "same-origin", // include, same-origin, *omit
-        headers: {
-            "Content-Type": "application/json; charset=utf-8",
-        },
-        redirect: "follow",
-        referrer: "no-referrer",
-        body: JSON.stringify({rawtx:tx}),
-    })
-    let text = await result.text();
-    console.log(text);
-  }
-}
-
 class App extends Component {
   constructor(props) {
     super(props)
@@ -89,32 +21,36 @@ class App extends Component {
       address: undefined,
       buffer: "", // receive buffer from serialport
       blockchain: new InsightAPI(),
+      transactions: [],
     }
+
+    this.connect = this.connect.bind(this);
+    this.reconnect = this.reconnect.bind(this);
+    this.handleDisconnect = this.handleDisconnect.bind(this);
+
+    // Set handler for USB disconnections
+    navigator.usb.ondisconnect = this.handleDisconnect;
+
+    // Set handler for USB connections
+    navigator.usb.onconnect = this.reconnect;
   }
 
   componentDidMount() {
-    // Attempt to reconnect
-    this.reconnect()
-
-    // Set handler for USB disconnections
-    navigator.usb.ondisconnect = this.handleDisconnect.bind(this)
-
-    // Set handler for USB connections
-    navigator.usb.onconnect = this.reconnect.bind(this)
+    this.reconnect();
   }
 
   connect() {
-    window.serial.requestPort().then(this.handlePort.bind(this))
+    window.serial.requestPort().then((port) => this.handlePort(port));
   }
 
   reconnect() {
     window.serial.getPorts().then(ports => {
-      if (ports.length == 0) {
-        console.log("no ports found")
+      if (ports.length === 0) {
+        console.log("no ports found");
       } else {
-        console.log("found ports:", ports)
+        console.log("found ports:", ports);
         // For now, just connect to the first one
-        this.handlePort(ports[0])
+        this.handlePort(ports[0]);
       }
     })
   }
@@ -125,7 +61,7 @@ class App extends Component {
   }
 
   handleDisconnect(evt) {
-    if (this.state.port.device_ == evt.device) {
+    if (this.state.port.device_ === evt.device) {
       // The device has disconnect
       // We need to update the state to reflect this
       this.setState({ port: undefined });
@@ -136,15 +72,15 @@ class App extends Component {
     console.log('Connecting to ' + port.device_.productName + '...');
     port.connect().then(() => {
       console.log('Connected to port:', port);
-      port.onReceive = this.handleSerialMessage.bind(this)
-      port.onReceiveError = this.handleSerialError.bind(this)
+      port.onReceive = this.handleSerialMessage.bind(this);
+      port.onReceiveError = this.handleSerialError.bind(this);
 
       // Save the port object on state
       this.setState({ port })
 
       // Try to load our bitcoin address
-      let textEncoder = new TextEncoder();
-      let payload = textEncoder.encode("addr")
+      const textEncoder = new TextEncoder();
+      const payload = textEncoder.encode("addr");
       port.send(payload)
           .catch(error => console.log("Error requesting Bitcoin address", error))
 
@@ -155,8 +91,8 @@ class App extends Component {
 
   handleSerialMessage(raw) {
     let buffer = this.state.buffer;
-    let textDecoder = new TextDecoder();
-    let message = textDecoder.decode(raw);
+    const textDecoder = new TextDecoder();
+    const message = textDecoder.decode(raw);
     // append new data to buffer
     buffer += message;
     // check if new line character is there
@@ -174,8 +110,10 @@ class App extends Component {
       let [command, payload] = message.split(",");
       if (command === "addr") {
         console.log("received addr message");
-        let address = payload.replace(/[^0-9a-z]/gi, '');
+        const address = payload.replace(/[^0-9a-z]/gi, '');
+
         this.setState({ address });
+        this.handleChangeAddress(address);
       }
       else if (command === "sign_tx") {
         console.log("received tx signature");
@@ -189,28 +127,104 @@ class App extends Component {
         console.log("unhandled message", message);
       }
     });
+
   }
 
   handleSerialError(error) {
     console.log('Serial receive error: ' + error);
   }
 
+  //  @dev handles setting new address
+  //  We will fetch all the address' transactions and connect to the web socket
+  handleChangeAddress(newAddress, oldAddress = null) {
+
+    //  @dev - If the new address is null, return null
+    if(!newAddress) {
+      return null;
+    }
+
+    //  @dev - If the address is the same, we skip reconnecting to the socket
+    if (newAddress !== oldAddress) {
+
+      const socket = io("https://test-insight.bitpay.com/");
+      //  Start the connection to the bitpay websocket
+      //  TODO as for now we are using the test network, in the future,
+      //  set the network dynamically
+      socket.on('connect', function() {
+        // Join the room.
+        socket.emit('subscribe', 'inv');
+      });
+
+      socket.on('bitcoind/addresstxid', ({ address, txid }) => { return this.addTransaction(txid) });
+      socket.on('connect', () => socket.emit('subscribe', 'bitcoind/addresstxid', [ newAddress ]))
+    }
+
+    //  Delete previous transactions
+    this.setState({ transactions: [] });
+
+    //  Fetch all the address' transactions
+    this.getTransactions(newAddress)
+      .then((transactions) => {
+        transactions.map((transactionId) => {
+          this.addTransaction(transactionId);
+        })
+      });
+
+  }
+
   async signTx(address, amount) {
-    let unsigned = await this.state.blockchain.buildTx(this.state.address, address, amount)
-    let textEncoder = new TextEncoder();
-    let message = "sign_tx " + unsigned
+    const unsigned = await this.state.blockchain.buildTx(this.state.address, address, amount);
+    const textEncoder = new TextEncoder();
+    const message = "sign_tx " + unsigned;
     this.state.port.send(textEncoder.encode(message))
       .catch(error => {
         console.log('Send error: ' + error);
       });
   }
 
+  async getTransactions(address) {
+    return await this.state.blockchain.transactions(address);
+  }
+
+  async getTransactionDetails(transactionId) {
+    return await this.state.blockchain.transactionDetails(transactionId);
+  }
+
+  //  @dev - Adds or Updates an transaction in the transactions list
+  //  @params {string} - transaction ID
+  async addTransaction(transactionId) {
+    const transactions = this.state.transactions;
+    return this.getTransactionDetails(transactionId)
+      .then((transDetails) => {
+
+        //  try to find if there is a transaction with Id equal to the {transactionId}
+        //  If there is, update that transaction with new infromation
+        //  If not add that transaction to the transactions array
+        let isNewTransaction = true;
+        transactions.map((trans, index) => {
+          if (trans.txid === transactionId) {
+
+            console.log("Updating transaction:", transactionId);
+            transactions[index] = transDetails;
+            isNewTransaction = false;
+          }
+        });
+
+        //  Is a new transaction?
+        //  If so add it to the array
+        if (isNewTransaction) {
+          console.log("Inserting transaction:", transactionId);
+          return this.setState({ transactions: [...this.state.transactions, transDetails] })
+        }
+      });
+  }
+
   renderPage() {
-    let address = this.state.address
-    let connected = !!this.state.port
+    const address = this.state.address;
+    const connected = !!this.state.port;
     return (
       <Switch>
-        <Route exact path="/" component={Homepage} />
+        <Route exact path="/" render={props => <Homepage {...props} address={address} transactions={this.state.transactions || []} />} />
         <Route path="/send" render={props => <Send {...props} signTx={this.signTx.bind(this)}
                     connected={connected} />} />
         <Route path="/receive" render={props => <Receive {...props} address={address} />} />
