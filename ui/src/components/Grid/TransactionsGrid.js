@@ -73,7 +73,7 @@ class TransactionsGrid extends Component {
         <Cell
           key={`statur-${index}`}
         >
-          {this.renderTransactionStatus(transaction.confirmations)}
+          {this.renderTransactionStatus(transaction.confirmations, isSendTransaction)}
         </Cell>,
       ];
     })
